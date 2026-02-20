@@ -1,12 +1,15 @@
 import { Event } from '@/core/types';
 import { useConcerts } from '@/core/useConcerts';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Image,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -14,6 +17,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const { events, loading, error, searchConcerts } = useConcerts();
+  const [query, setQuery] = useState('');
+
+  const handleSearch = useCallback(() => {
+    searchConcerts(query.trim() || undefined);
+  }, [query]);
+
+  const handleClear = useCallback(() => {
+    setQuery('');
+    searchConcerts();
+  }, []);
 
   function renderEvent({ item }: { item: Event }) {
     return (
@@ -39,6 +52,30 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Home</Text>
+
+      {/* Search bar */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchInputWrapper}>
+          <Ionicons name="search" size={18} color={Colors.textMuted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Zoek artiest, event, venue of stad..."
+            placeholderTextColor={Colors.textMuted}
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+          <Text style={styles.searchButtonText}>Zoek</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Content */}
       {loading ? (
@@ -80,6 +117,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  searchInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+  },
+  searchIcon: {
+    marginRight: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    color: Colors.text,
+    fontSize: FontSizes.sm,
+    paddingVertical: 10,
+  },
+  clearButton: {
+    marginLeft: Spacing.xs,
+  },
+  searchButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.sm,
+    paddingHorizontal: Spacing.lg,
+    justifyContent: 'center',
+  },
+  searchButtonText: {
+    color: Colors.text,
+    fontWeight: 'bold',
+    fontSize: FontSizes.sm,
   },
   list: {
     paddingHorizontal: Spacing.lg,
