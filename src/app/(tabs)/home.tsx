@@ -2,22 +2,24 @@ import { Event } from '@/core/types';
 import { useConcerts } from '@/core/useConcerts';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const { events, loading, error, searchConcerts } = useConcerts();
   const [query, setQuery] = useState('');
+  const router = useRouter();
 
   const handleSearch = useCallback(() => {
     searchConcerts(query.trim() || undefined);
@@ -30,7 +32,25 @@ export default function HomeScreen() {
 
   function renderEvent({ item }: { item: Event }) {
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() =>
+          router.push({
+            pathname: '/concert/[id]',
+            params: {
+              id: item.id,
+              name: item.name,
+              date: item.date,
+              time: item.time,
+              venue: item.venue,
+              city: item.city,
+              imageUrl: item.imageUrl,
+              url: item.url ?? '',
+            },
+          })
+        }
+      >
         {item.imageUrl ? (
           <Image source={{ uri: item.imageUrl }} style={styles.image} />
         ) : null}
@@ -45,7 +65,7 @@ export default function HomeScreen() {
             {item.date} {item.time ? `• ${item.time}` : ''}
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }
 

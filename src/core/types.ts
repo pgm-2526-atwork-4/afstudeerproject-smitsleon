@@ -2,6 +2,7 @@
 export interface TicketmasterEvent {
   id: string;
   name: string;
+  url?: string;
   dates: {
     start: {
       localDate?: string;
@@ -29,4 +30,5 @@ export interface Event {
   venue: string;
   city: string;
   imageUrl: string;
+  url?: string;
 }

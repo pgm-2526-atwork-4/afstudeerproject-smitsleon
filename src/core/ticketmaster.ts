@@ -15,6 +15,7 @@ function toEvent(tm: TicketmasterEvent): Event {
     venue: venue?.name ?? 'Onbekend',
     city: venue?.city?.name ?? 'Onbekend',
     imageUrl: tm.images?.[0]?.url ?? '',
+    url: tm.url,
   };
 }
 
