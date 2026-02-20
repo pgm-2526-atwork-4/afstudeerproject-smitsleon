@@ -1,4 +1,4 @@
-import { Colors, FontSizes, Spacing } from '@/lib/theme';
+import { Colors, FontSizes, Spacing } from '@/style/theme';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

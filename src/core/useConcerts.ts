@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { searchEvents } from '../lib/ticketmaster';
-import { Event } from '../types';
+import { searchEvents } from './ticketmaster';
+import { Event } from './types';
 
 export function useConcerts() {
   const [events, setEvents] = useState<Event[]>([]);

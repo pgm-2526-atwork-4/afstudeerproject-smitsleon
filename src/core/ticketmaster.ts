@@ -1,4 +1,4 @@
-import { Event, TicketmasterEvent, TicketmasterResponse } from '../types';
+import { Event, TicketmasterEvent, TicketmasterResponse } from './types';
 
 const API_KEY = process.env.EXPO_PUBLIC_TICKETMASTER_API_KEY;
 const BASE_URL = 'https://app.ticketmaster.com/discovery/v2';

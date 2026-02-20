@@ -1,14 +1,14 @@
-import { useConcerts } from '@/hooks/useConcerts';
-import { Colors, FontSizes, Radius, Spacing } from '@/lib/theme';
-import { Event } from '@/types';
+import { Event } from '@/core/types';
+import { useConcerts } from '@/core/useConcerts';
+import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
