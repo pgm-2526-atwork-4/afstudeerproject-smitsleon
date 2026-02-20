@@ -1,11 +1,12 @@
+import { Colors, FontSizes, Spacing } from '@/lib/theme';
 import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0D0D0D' }}>
-      <View style={{ flex: 1, padding: 24 }}>
-        <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: 'bold' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.background }}>
+      <View style={{ flex: 1, padding: Spacing.xl }}>
+        <Text style={{ color: Colors.text, fontSize: FontSizes.xxl, fontWeight: 'bold' }}>
           Profiel
         </Text>
       </View>

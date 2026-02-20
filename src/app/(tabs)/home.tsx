@@ -1,13 +1,14 @@
 import { useConcerts } from '@/hooks/useConcerts';
+import { Colors, FontSizes, Radius, Spacing } from '@/lib/theme';
 import { Event } from '@/types';
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -42,7 +43,7 @@ export default function HomeScreen() {
       {/* Content */}
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#1DB954" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Evenementen laden...</Text>
         </View>
       ) : error ? (
@@ -70,25 +71,24 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: Colors.background,
   },
   title: {
-    color: '#ffffffff',
-    fontSize: 28,
+    color: Colors.text,
+    fontSize: FontSizes.xxl,
     fontWeight: 'bold',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
   },
-
   list: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
   card: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 12,
-    marginBottom: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.md,
     overflow: 'hidden',
   },
   image: {
@@ -96,17 +96,17 @@ const styles = StyleSheet.create({
     height: 160,
   },
   cardContent: {
-    padding: 12,
+    padding: Spacing.md,
   },
   eventName: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 17,
     fontWeight: 'bold',
     marginBottom: 6,
   },
   eventDetails: {
-    color: '#A0A0A0',
-    fontSize: 14,
+    color: Colors.textSecondary,
+    fontSize: FontSizes.sm,
     marginBottom: 2,
   },
   center: {
@@ -115,24 +115,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    color: '#A0A0A0',
-    marginTop: 12,
+    color: Colors.textSecondary,
+    marginTop: Spacing.md,
   },
   errorText: {
-    color: '#FF4444',
-    fontSize: 16,
+    color: Colors.error,
+    fontSize: FontSizes.md,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   retryText: {
-    color: '#1DB954',
+    color: Colors.primary,
     fontWeight: 'bold',
     fontSize: 15,
   },
   emptyText: {
-    color: '#666',
+    color: Colors.textMuted,
     textAlign: 'center',
     marginTop: 40,
-    fontSize: 16,
+    fontSize: FontSizes.md,
   },
 });
