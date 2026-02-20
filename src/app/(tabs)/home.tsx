@@ -71,7 +71,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Home</Text>
+      <Text style={styles.title}>Concert Buddy</Text>
 
       {/* Search bar */}
       <View style={styles.searchRow}>
