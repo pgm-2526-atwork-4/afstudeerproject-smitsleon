@@ -3,12 +3,12 @@ import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -93,7 +93,7 @@ export default function ProfileScreen() {
         </View>
 
         {/* Profiel bewerken button */}
-        <TouchableOpacity style={styles.editButton}>
+        <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit-profile')}>
           <Text style={styles.editButtonText}>Profiel bewerken</Text>
         </TouchableOpacity>
 
