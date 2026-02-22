@@ -238,7 +238,7 @@ export default function EditProfileScreen() {
               value={useLocation} 
               onValueChange={handleToggleLocation} 
               trackColor={{ true: Colors.primary }}
-              thumbColor="#ffffff"
+              thumbColor= {Colors.text}
             />
           </View>
 
