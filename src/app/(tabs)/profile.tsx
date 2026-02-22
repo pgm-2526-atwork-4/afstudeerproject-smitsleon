@@ -1,14 +1,15 @@
 import { useAuth } from '@/core/AuthContext';
+import { calculateAge } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -47,13 +48,13 @@ export default function ProfileScreen() {
 
         {/* Age & City */}
         <View style={styles.metaRow}>
-          {profile.age ? (
+          {profile.birth_date ? (
             <View style={styles.metaItem}>
               <Ionicons name="calendar-outline" size={14} color={Colors.textSecondary} />
-              <Text style={styles.metaText}>{profile.age} jaar</Text>
+              <Text style={styles.metaText}>{calculateAge(profile.birth_date)} jaar</Text>
             </View>
           ) : null}
-          {profile.city ? (
+          {profile.city && profile.share_location !== false ? (
             <View style={styles.metaItem}>
               <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
               <Text style={styles.metaText}>{profile.city}</Text>

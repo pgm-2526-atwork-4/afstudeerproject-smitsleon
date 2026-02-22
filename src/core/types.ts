@@ -41,7 +41,11 @@ export interface UserProfile {
   avatar_url: string | null;
   bio: string | null;
   age: number | null;
+  birth_date: string | null;
   city: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  share_location: boolean;
   vibe_tags: string[];
   created_at: string;
 }
@@ -57,3 +61,15 @@ export const VIBE_TAGS = [
   'VIP',
   'Foodtrucks',
 ] as const;
+
+export function calculateAge(birthDate: string): number {
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+

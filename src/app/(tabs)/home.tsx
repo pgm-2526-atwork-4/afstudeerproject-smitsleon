@@ -42,7 +42,6 @@ export default function HomeScreen() {
               id: item.id,
               name: item.name,
               date: item.date,
-              time: item.time,
               venue: item.venue,
               city: item.city,
               imageUrl: item.imageUrl,
@@ -62,7 +61,7 @@ export default function HomeScreen() {
             {item.venue}, {item.city}
           </Text>
           <Text style={styles.eventDetails}>
-            {item.date} {item.time ? `• ${item.time}` : ''}
+            {item.date}
           </Text>
         </View>
       </TouchableOpacity>

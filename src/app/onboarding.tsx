@@ -1,9 +1,11 @@
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { VIBE_TAGS } from '@/core/types';
+import { VIBE_TAGS, calculateAge } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -14,10 +16,11 @@ import {
     Platform,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -33,8 +36,14 @@ export default function OnboardingScreen() {
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
   // Step 2 - optional
-  const [age, setAge] = useState('');
-  const [city, setCity] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [city, setCity] = useState<string | null>(null);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [useLocation, setUseLocation] = useState(false);
+  const [shareLocation, setShareLocation] = useState(true);
   const [bio, setBio] = useState('');
 
   // Step 3 - vibe tags
@@ -81,6 +90,52 @@ export default function OnboardingScreen() {
     return data.publicUrl;
   }
 
+  // Get location
+  async function getLocation() {
+    setGettingLocation(true);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Toegang geweigerd', 'Zonder toestemming kunnen we je locatie niet bepalen.');
+      setGettingLocation(false);
+      setUseLocation(false);
+      return;
+    }
+
+    try {
+      const location = await Location.getCurrentPositionAsync({});
+      setLatitude(location.coords.latitude);
+      setLongitude(location.coords.longitude);
+
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (geocode[0] && geocode[0].city) {
+        setCity(geocode[0].city);
+      } else {
+        setCity('Onbekend');
+      }
+    } catch (e) {
+      Alert.alert('Fout', 'Kon de locatie niet bepalen. Controleer of GPS aan staat.');
+      setUseLocation(false);
+    }
+    setGettingLocation(false);
+  }
+
+  async function handleToggleLocation(val: boolean) {
+    if (val) {
+      setUseLocation(true);
+      await getLocation();
+    } else {
+      setUseLocation(false);
+      setShareLocation(false);
+      setCity(null);
+      setLatitude(null);
+      setLongitude(null);
+    }
+  }
+
   // Toggle vibe tag (max 3)
   function toggleTag(tag: string) {
     setSelectedTags((prev) => {
@@ -104,13 +159,19 @@ export default function OnboardingScreen() {
     try {
       const avatarUrl = await uploadAvatar();
 
+      const birthDateStr = birthDate ? birthDate.toISOString().split('T')[0] : null;
+
       const { error } = await supabase.from('users').upsert({
         id: user.id,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         avatar_url: avatarUrl,
-        age: age ? parseInt(age, 10) : null,
-        city: city.trim() || null,
+        birth_date: birthDateStr,
+        age: birthDate ? calculateAge(birthDateStr!) : null,
+        city: city || null,
+        latitude: latitude,
+        longitude: longitude,
+        share_location: shareLocation,
         bio: bio.trim() || null,
         vibe_tags: selectedTags,
       });
@@ -192,21 +253,73 @@ export default function OnboardingScreen() {
               <Text style={styles.stepTitle}>Over jou</Text>
               <Text style={styles.stepSubtitle}>Dit is optioneel</Text>
 
-              <TextInput
+              {/* Birth date picker */}
+              <TouchableOpacity
                 style={styles.input}
-                placeholder="Leeftijd"
-                placeholderTextColor={Colors.textMuted}
-                value={age}
-                onChangeText={setAge}
-                keyboardType="number-pad"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Woonplaats"
-                placeholderTextColor={Colors.textMuted}
-                value={city}
-                onChangeText={setCity}
-              />
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ color: birthDate ? Colors.text : Colors.textMuted, fontSize: FontSizes.md }}>
+                  {birthDate
+                    ? `${birthDate.toLocaleDateString('nl-BE')} (${calculateAge(birthDate.toISOString())} jaar)`
+                    : 'Geboortedatum'}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={birthDate ?? new Date(2000, 0, 1)}
+                  mode="date"
+                  maximumDate={new Date()}
+                  minimumDate={new Date(1930, 0, 1)}
+                  onChange={(_, date) => {
+                    setShowDatePicker(Platform.OS === 'ios');
+                    if (date) setBirthDate(date);
+                  }}
+                  themeVariant="dark"
+                />
+              )}
+
+              {/* GPS Location Toggle */}
+              <View style={styles.switchRow}>
+                <View style={styles.switchInfo}>
+                  <Text style={styles.switchLabel}>Locatie bepalen</Text>
+                  <Text style={styles.switchHelp}>Voor concerten in de buurt</Text>
+                </View>
+                <Switch 
+                  value={useLocation} 
+                  onValueChange={handleToggleLocation} 
+                  trackColor={{ true: Colors.primary }}
+                  thumbColor="#ffffff"
+                />
+              </View>
+
+              {useLocation && (
+                <View style={styles.locationContainer}>
+                  {gettingLocation ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="location" size={20} color={Colors.primary} />
+                      <Text style={styles.locationText}>{city || 'Locatie ophalen...'}</Text>
+                    </>
+                  )}
+                </View>
+              )}
+
+              {/* Share Location Toggle */}
+              <View style={styles.switchRow}>
+                <View style={styles.switchInfo}>
+                  <Text style={styles.switchLabel}>Toon op profiel</Text>
+                  <Text style={styles.switchHelp}>Anderen zien je stad</Text>
+                </View>
+                <Switch 
+                  value={shareLocation} 
+                  onValueChange={setShareLocation} 
+                  trackColor={{ true: Colors.primary }}
+                  thumbColor="#ffffff"
+                  disabled={!useLocation}
+                />
+              </View>
+
               <TextInput
                 style={[styles.input, styles.bioInput]}
                 placeholder="Bio — vertel iets over jezelf"
@@ -361,6 +474,46 @@ const styles = StyleSheet.create({
   },
   inputDisabled: {
     opacity: 0.5,
+  },
+  label: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.sm,
+    marginBottom: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  switchInfo: {
+    flex: 1,
+  },
+  switchLabel: {
+    color: Colors.text,
+    fontSize: FontSizes.md,
+    fontWeight: '500',
+  },
+  switchHelp: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.xs,
+    marginTop: 2,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  locationText: {
+    color: Colors.text,
+    fontSize: FontSizes.md,
   },
   bioInput: {
     minHeight: 80,

@@ -1,23 +1,26 @@
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { VIBE_TAGS } from '@/core/types';
+import { VIBE_TAGS, calculateAge } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -28,8 +31,17 @@ export default function EditProfileScreen() {
 
   const [firstName, setFirstName] = useState(profile?.first_name ?? '');
   const [lastName, setLastName] = useState(profile?.last_name ?? '');
-  const [age, setAge] = useState(profile?.age?.toString() ?? '');
-  const [city, setCity] = useState(profile?.city ?? '');
+  const [birthDate, setBirthDate] = useState<Date | null>(
+    profile?.birth_date ? new Date(profile.birth_date) : null
+  );
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [city, setCity] = useState<string | null>(profile?.city ?? null);
+  const [latitude, setLatitude] = useState<number | null>(profile?.latitude ?? null);
+  const [longitude, setLongitude] = useState<number | null>(profile?.longitude ?? null);
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [useLocation, setUseLocation] = useState(!!profile?.latitude);
+  const [shareLocation, setShareLocation] = useState(profile?.share_location ?? true);
+  
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [selectedTags, setSelectedTags] = useState<string[]>(profile?.vibe_tags ?? []);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
@@ -76,6 +88,52 @@ export default function EditProfileScreen() {
     });
   }
 
+  // Get location
+  async function getLocation() {
+    setGettingLocation(true);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Toegang geweigerd', 'Zonder toestemming kunnen we je locatie niet bepalen.');
+      setGettingLocation(false);
+      setUseLocation(false);
+      return;
+    }
+
+    try {
+      const location = await Location.getCurrentPositionAsync({});
+      setLatitude(location.coords.latitude);
+      setLongitude(location.coords.longitude);
+
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (geocode[0] && geocode[0].city) {
+        setCity(geocode[0].city);
+      } else {
+        setCity('Onbekend');
+      }
+    } catch (e) {
+      Alert.alert('Fout', 'Kon de locatie niet bepalen. Controleer of GPS aan staat.');
+      setUseLocation(false);
+    }
+    setGettingLocation(false);
+  }
+
+  async function handleToggleLocation(val: boolean) {
+    if (val) {
+      setUseLocation(true);
+      await getLocation();
+    } else {
+      setUseLocation(false);
+      setShareLocation(false);
+      setCity(null);
+      setLatitude(null);
+      setLongitude(null);
+    }
+  }
+
   async function handleSave() {
     if (!firstName.trim() || !lastName.trim()) {
       Alert.alert('Fout', 'Voornaam en achternaam zijn verplicht');
@@ -85,13 +143,18 @@ export default function EditProfileScreen() {
     setSaving(true);
 
     const avatarUrl = await uploadAvatar();
+    const birthDateStr = birthDate ? birthDate.toISOString().split('T')[0] : null;
 
     const { error } = await supabase.from('users').update({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       avatar_url: avatarUrl,
-      age: age ? parseInt(age, 10) : null,
-      city: city.trim() || null,
+      birth_date: birthDateStr,
+      age: birthDate ? calculateAge(birthDateStr!) : null,
+      city: city || null,
+      latitude: latitude,
+      longitude: longitude,
+      share_location: shareLocation,
       bio: bio.trim() || null,
       vibe_tags: selectedTags,
     }).eq('id', user.id);
@@ -137,38 +200,77 @@ export default function EditProfileScreen() {
 
           {/* Fields */}
           <Text style={styles.label}>Voornaam *</Text>
-          <TextInput
-            style={styles.input}
-            value={firstName}
-            onChangeText={setFirstName}
-            placeholderTextColor={Colors.textMuted}
-          />
+          <TextInput style={styles.input} value={firstName} onChangeText={setFirstName} />
 
           <Text style={styles.label}>Achternaam *</Text>
-          <TextInput
-            style={styles.input}
-            value={lastName}
-            onChangeText={setLastName}
-            placeholderTextColor={Colors.textMuted}
-          />
+          <TextInput style={styles.input} value={lastName} onChangeText={setLastName} />
 
-          <Text style={styles.label}>Leeftijd</Text>
-          <TextInput
-            style={styles.input}
-            value={age}
-            onChangeText={setAge}
-            keyboardType="number-pad"
-            placeholderTextColor={Colors.textMuted}
-          />
+          {/* Birth date */}
+          <Text style={styles.label}>Geboortedatum</Text>
+          <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+            <Text style={{ color: birthDate ? Colors.text : Colors.textMuted, fontSize: FontSizes.md }}>
+              {birthDate
+                ? `${birthDate.toLocaleDateString('nl-BE')} (${calculateAge(birthDate.toISOString())} jaar)`
+                : 'Kies geboortedatum'}
+            </Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={birthDate ?? new Date(2000, 0, 1)}
+              mode="date"
+              maximumDate={new Date()}
+              minimumDate={new Date(1930, 0, 1)}
+              onChange={(_, date) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (date) setBirthDate(date);
+              }}
+              themeVariant="dark"
+            />
+          )}
 
-          <Text style={styles.label}>Woonplaats</Text>
-          <TextInput
-            style={styles.input}
-            value={city}
-            onChangeText={setCity}
-            placeholderTextColor={Colors.textMuted}
-          />
+          {/* GPS Location Toggle */}
+          <View style={styles.switchRow}>
+            <View style={styles.switchInfo}>
+              <Text style={styles.switchLabel}>Locatie bepalen</Text>
+              <Text style={styles.switchHelp}>Voor concerten in de buurt</Text>
+            </View>
+            <Switch 
+              value={useLocation} 
+              onValueChange={handleToggleLocation} 
+              trackColor={{ true: Colors.primary }}
+              thumbColor="#ffffff"
+            />
+          </View>
 
+          {useLocation && (
+            <View style={styles.locationContainer}>
+              {gettingLocation ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <>
+                  <Ionicons name="location" size={20} color={Colors.primary} />
+                  <Text style={styles.locationText}>{city || 'Locatie ophalen...'}</Text>
+                </>
+              )}
+            </View>
+          )}
+
+          {/* Share Location Toggle */}
+          <View style={styles.switchRow}>
+            <View style={styles.switchInfo}>
+              <Text style={styles.switchLabel}>Toon op profiel</Text>
+              <Text style={styles.switchHelp}>Anderen zien je stad</Text>
+            </View>
+            <Switch 
+              value={shareLocation} 
+              onValueChange={setShareLocation} 
+              trackColor={{ true: Colors.primary }}
+              thumbColor="#ffffff"
+              disabled={!useLocation}
+            />
+          </View>
+
+          {/* Bio */}
           <Text style={styles.label}>Bio</Text>
           <TextInput
             style={[styles.input, styles.bioInput]}
@@ -266,6 +368,42 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+    fontSize: FontSizes.md,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: Spacing.md,
+  },
+  switchInfo: {
+    flex: 1,
+  },
+  switchLabel: {
+    color: Colors.text,
+    fontSize: FontSizes.md,
+    fontWeight: '500',
+  },
+  switchHelp: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.xs,
+    marginTop: 2,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  locationText: {
+    color: Colors.text,
     fontSize: FontSizes.md,
   },
   bioInput: {
