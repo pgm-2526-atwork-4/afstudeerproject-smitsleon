@@ -62,6 +62,20 @@ export const VIBE_TAGS = [
   'Foodtrucks',
 ] as const;
 
+// Group stored in Supabase
+export interface Group {
+  id: string;
+  event_id: string;
+  created_by: string;
+  title: string;
+  description: string | null;
+  vibe_focus: string | null;
+  max_members: number;
+  created_at: string;
+  member_count?: number;
+  is_member?: boolean;
+}
+
 export function calculateAge(birthDate: string): number {
   const today = new Date();
   const birth = new Date(birthDate);
