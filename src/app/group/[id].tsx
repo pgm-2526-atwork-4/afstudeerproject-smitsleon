@@ -282,31 +282,6 @@ export default function GroupDetailScreen() {
         <View style={styles.actionSection}>
           {isMember ? (
             <>
-              {/* Chat button */}
-              <TouchableOpacity
-                style={styles.joinButton}
-                onPress={() =>
-                  router.push({
-                    pathname: '/group/chat',
-                    params: {
-                      id: params.id,
-                      title: params.title,
-                      description: params.description,
-                      max_members: params.max_members,
-                      created_by: params.created_by,
-                      event_id: params.event_id,
-                      event_name: params.event_name,
-                      event_image_url: params.event_image_url,
-                      event_date: params.event_date,
-                      event_location: params.event_location,
-                    },
-                  })
-                }
-              >
-                <Ionicons name="chatbubbles" size={20} color={Colors.text} />
-                <Text style={styles.joinButtonText}>Groepschat</Text>
-              </TouchableOpacity>
-
               {/* Leave / Delete button */}
               <TouchableOpacity
                 style={[styles.leaveButton, isAdmin && styles.deleteButton]}
