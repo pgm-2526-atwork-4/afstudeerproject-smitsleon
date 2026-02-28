@@ -28,6 +28,9 @@ interface GroupWithEvent {
   event_image_url: string | null;
   event_date: string | null;
   event_location: string | null;
+  last_message: string | null;
+  last_message_sender: string | null;
+  last_message_time: string | null;
 }
 
 export default function ChatScreen() {
@@ -85,9 +88,58 @@ export default function ChatScreen() {
             event_image_url: g.events?.image_url ?? null,
             event_date: g.events?.date ?? null,
             event_location: g.events?.location_name ?? null,
+            last_message: null,
+            last_message_sender: null,
+            last_message_time: null,
           };
         })
         .filter(Boolean) as GroupWithEvent[];
+
+      // Fetch last message for each group
+      if (parsed.length > 0) {
+        const groupIds = parsed.map((g) => g.id);
+        const { data: msgData } = await supabase
+          .from('messages')
+          .select(`
+            group_id,
+            content,
+            created_at,
+            users (
+              first_name
+            )
+          `)
+          .in('group_id', groupIds)
+          .order('created_at', { ascending: false });
+
+        // Take the first (most recent) message per group
+        const lastMessages = new Map<string, { content: string; sender: string; time: string }>();
+        for (const msg of (msgData ?? []) as any[]) {
+          if (!lastMessages.has(msg.group_id)) {
+            lastMessages.set(msg.group_id, {
+              content: msg.content,
+              sender: msg.users?.first_name ?? '',
+              time: msg.created_at,
+            });
+          }
+        }
+
+        for (const group of parsed) {
+          const last = lastMessages.get(group.id);
+          if (last) {
+            group.last_message = last.content;
+            group.last_message_sender = last.sender;
+            group.last_message_time = last.time;
+          }
+        }
+
+        // Sort: groups with recent messages first, then by joined_at
+        parsed.sort((a, b) => {
+          const timeA = a.last_message_time ? new Date(a.last_message_time).getTime() : 0;
+          const timeB = b.last_message_time ? new Date(b.last_message_time).getTime() : 0;
+          return timeB - timeA;
+        });
+      }
+
       setGroups(parsed);
     }
 
@@ -97,15 +149,29 @@ export default function ChatScreen() {
 
   useFocusEffect(useCallback(() => { fetchMyGroups(); }, [fetchMyGroups]));
 
+  function formatMessageTime(dateStr: string) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+    }
+    if (d.toDateString() === yesterday.toDateString()) {
+      return 'Gisteren';
+    }
+    return d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
+  }
+
   function renderGroup({ item }: { item: GroupWithEvent }) {
-    const isAdmin = item.created_by === user?.id;
     return (
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.75}
         onPress={() =>
           router.push({
-            pathname: '/group/[id]',
+            pathname: '/group/chat',
             params: {
               id: item.id,
               title: item.title,
@@ -135,24 +201,23 @@ export default function ChatScreen() {
         {/* Info */}
         <View style={styles.cardInfo}>
           <Text style={styles.groupTitle} numberOfLines={1}>{item.title}</Text>
-          {item.description ? (
-            <Text style={styles.groupDesc} numberOfLines={1}>{item.description}</Text>
-          ) : null}
-          <View style={styles.metaRow}>
-            <View style={styles.memberBadge}>
-              <Ionicons name="people-outline" size={13} color={Colors.textSecondary} />
-              <Text style={styles.memberBadgeText}>{item.member_count}/{item.max_members}</Text>
-            </View>
-            {isAdmin && (
-              <View style={styles.adminBadge}>
-                <Ionicons name="shield-checkmark" size={12} color={Colors.primary} />
-                <Text style={styles.adminBadgeText}>Beheerder</Text>
-              </View>
-            )}
-          </View>
+          {item.last_message ? (
+            <Text style={styles.lastMessage} numberOfLines={1}>
+              <Text style={styles.lastMessageSender}>{item.last_message_sender}: </Text>
+              {item.last_message}
+            </Text>
+          ) : (
+            <Text style={styles.lastMessage} numberOfLines={1}>Nog geen berichten</Text>
+          )}
         </View>
 
-        <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
+        {/* Time + chevron */}
+        <View style={styles.cardRight}>
+          {item.last_message_time ? (
+            <Text style={styles.timeText}>{formatMessageTime(item.last_message_time)}</Text>
+          ) : null}
+          <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+        </View>
       </TouchableOpacity>
     );
   }
@@ -233,25 +298,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardInfo: { flex: 1, gap: 4, paddingVertical: Spacing.sm },
+  cardInfo: { flex: 1, gap: 2, paddingVertical: Spacing.sm },
   groupTitle: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
-  groupDesc: { color: Colors.textSecondary, fontSize: FontSizes.sm },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: 2 },
-  memberBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  lastMessage: { color: Colors.textMuted, fontSize: FontSizes.sm },
+  lastMessageSender: { color: Colors.textSecondary, fontWeight: '600' },
+  cardRight: {
+    alignItems: 'flex-end',
+    gap: Spacing.xs,
   },
-  memberBadgeText: { color: Colors.textSecondary, fontSize: FontSizes.xs },
-  adminBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: Colors.surfaceLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
+  timeText: {
+    color: Colors.textMuted,
+    fontSize: FontSizes.xs,
   },
-  adminBadgeText: { color: Colors.primary, fontSize: FontSizes.xs, fontWeight: '600' },
 });
 

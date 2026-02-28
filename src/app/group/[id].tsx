@@ -5,15 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Member {
   user_id: string;
@@ -158,7 +159,7 @@ export default function GroupDetailScreen() {
   const hasTime = eventDate ? eventDate.getUTCHours() !== 0 || eventDate.getUTCMinutes() !== 0 : false;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView>
         {/* Header image */}
         <View style={styles.imageWrapper}>
@@ -276,53 +277,79 @@ export default function GroupDetailScreen() {
             })
           )}
         </View>
-      </ScrollView>
 
-      {/* Footer: Join / Leave / Delete */}
-      {!loadingMembers && (
-        <View style={styles.footer}>
+        {/* Action buttons */}
+        <View style={styles.actionSection}>
           {isMember ? (
-            <TouchableOpacity
-              style={[styles.leaveButton, isAdmin && styles.deleteButton]}
-              onPress={handleLeaveGroup}
-              disabled={leaving}
-            >
-              {leaving ? (
-                <ActivityIndicator color={Colors.text} />
-              ) : (
-                <>
-                  <Ionicons
-                    name={isAdmin ? 'trash-outline' : 'exit-outline'}
-                    size={18}
-                    color={Colors.text}
-                  />
-                  <Text style={styles.leaveButtonText}>
-                    {isAdmin ? 'Groep verwijderen' : 'Groep verlaten'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <>
+              {/* Chat button */}
+              <TouchableOpacity
+                style={styles.joinButton}
+                onPress={() =>
+                  router.push({
+                    pathname: '/group/chat',
+                    params: {
+                      id: params.id,
+                      title: params.title,
+                      description: params.description,
+                      max_members: params.max_members,
+                      created_by: params.created_by,
+                      event_id: params.event_id,
+                      event_name: params.event_name,
+                      event_image_url: params.event_image_url,
+                      event_date: params.event_date,
+                      event_location: params.event_location,
+                    },
+                  })
+                }
+              >
+                <Ionicons name="chatbubbles" size={20} color={Colors.text} />
+                <Text style={styles.joinButtonText}>Groepschat</Text>
+              </TouchableOpacity>
+
+              {/* Leave / Delete button */}
+              <TouchableOpacity
+                style={[styles.leaveButton, isAdmin && styles.deleteButton]}
+                onPress={handleLeaveGroup}
+                disabled={leaving}
+              >
+                {leaving ? (
+                  <ActivityIndicator color={Colors.text} size="small" />
+                ) : (
+                  <>
+                    <Ionicons
+                      name={isAdmin ? 'trash' : 'log-out-outline'}
+                      size={20}
+                      color={Colors.text}
+                    />
+                    <Text style={styles.leaveButtonText}>
+                      {isAdmin ? 'Groep verwijderen' : 'Groep verlaten'}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
           ) : (
             <TouchableOpacity
               style={[styles.joinButton, isFull && styles.joinButtonDisabled]}
               onPress={handleJoinGroup}
-              disabled={isFull || joining}
+              disabled={joining || isFull}
             >
               {joining ? (
-                <ActivityIndicator color={Colors.text} />
+                <ActivityIndicator color={Colors.text} size="small" />
               ) : (
                 <>
-                  <Ionicons name="people" size={18} color={Colors.text} />
+                  <Ionicons name="person-add" size={20} color={Colors.text} />
                   <Text style={styles.joinButtonText}>
-                    {isFull ? 'Groep is vol' : 'Deelnemen aan groep'}
+                    {isFull ? 'Groep is vol' : 'Deelnemen'}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
           )}
         </View>
-      )}
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -462,12 +489,10 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     fontWeight: '600',
   },
-  footer: {
+  actionSection: {
     padding: Spacing.lg,
+    gap: Spacing.sm,
     paddingBottom: Spacing.xl,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.background,
   },
   leaveButton: {
     flexDirection: 'row',
