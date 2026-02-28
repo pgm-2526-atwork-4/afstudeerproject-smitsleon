@@ -197,6 +197,18 @@ export default function GroupChatScreen() {
     return prev !== curr;
   }
 
+  function shouldShowTime(index: number): boolean {
+    // Show time on the last message, or when the next message is from a different user
+    // or sent in a different minute
+    if (index === messages.length - 1) return true;
+    const curr = messages[index];
+    const next = messages[index + 1];
+    if (curr.user_id !== next.user_id) return true;
+    const currMin = curr.created_at.slice(0, 16); // "YYYY-MM-DDTHH:MM"
+    const nextMin = next.created_at.slice(0, 16);
+    return currMin !== nextMin;
+  }
+
   function renderMessage({ item, index }: { item: Message; index: number }) {
     const isOwn = item.user_id === user?.id;
     const showDate = shouldShowDateSeparator(index);
@@ -246,11 +258,13 @@ export default function GroupChatScreen() {
           </View>
         </View>
 
-        {/* Time below bubble */}
-        <View style={[styles.timeRow, isOwn && styles.timeRowOwn]}>
-          {!isOwn && <View style={styles.messageAvatarSpacer} />}
-          <Text style={styles.messageTime}>{formatTime(item.created_at)}</Text>
-        </View>
+        {/* Time below bubble — only if last in same-user/same-minute streak */}
+        {shouldShowTime(index) && (
+          <View style={[styles.timeRow, isOwn && styles.timeRowOwn]}>
+            {!isOwn && <View style={styles.messageAvatarSpacer} />}
+            <Text style={styles.messageTime}>{formatTime(item.created_at)}</Text>
+          </View>
+        )}
       </View>
     );
   }
