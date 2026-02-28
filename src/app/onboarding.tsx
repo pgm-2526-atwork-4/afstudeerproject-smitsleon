@@ -25,7 +25,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OnboardingScreen() {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, signOut } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -197,6 +197,14 @@ export default function OnboardingScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scroll}>
+          {/* Sign out button */}
+          <TouchableOpacity
+            style={{ alignSelf: 'flex-end', padding: Spacing.sm }}
+            onPress={signOut}
+          >
+            <Ionicons name="log-out-outline" size={24} color={Colors.textMuted} />
+          </TouchableOpacity>
+
           {/* Progress indicator */}
           <View style={styles.progress}>
             {[1, 2, 3].map((s) => (

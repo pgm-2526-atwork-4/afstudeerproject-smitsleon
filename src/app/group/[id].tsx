@@ -42,8 +42,13 @@ export default function GroupDetailScreen() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [leaving, setLeaving] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   const isAdmin = params.created_by === user?.id;
+  const isMember = members.some((m) => m.user_id === user?.id);
+  const memberCount = members.length;
+  const maxMembers = parseInt(params.max_members, 10) || 6;
+  const isFull = memberCount >= maxMembers;
 
   const fetchMembers = useCallback(async () => {
     setLoadingMembers(true);
@@ -123,6 +128,27 @@ export default function GroupDetailScreen() {
         },
       },
     ]);
+  }
+
+  async function handleJoinGroup() {
+    if (!user) {
+      Alert.alert('Niet ingelogd', 'Log in om deel te nemen aan een groep.');
+      return;
+    }
+    if (isFull) {
+      Alert.alert('Groep vol', 'Deze groep heeft het maximale aantal leden bereikt.');
+      return;
+    }
+    setJoining(true);
+    const { error } = await supabase
+      .from('group_members')
+      .insert({ group_id: params.id, user_id: user.id });
+    if (error) {
+      Alert.alert('Fout', 'Deelnemen mislukt. Probeer opnieuw.');
+    } else {
+      await fetchMembers();
+    }
+    setJoining(false);
   }
 
   const initials = (m: Member) =>
@@ -208,7 +234,17 @@ export default function GroupDetailScreen() {
               const isMemberAdmin = member.user_id === params.created_by;
               const isCurrentUser = member.user_id === user?.id;
               return (
-                <View key={member.user_id} style={styles.memberRow}>
+                <TouchableOpacity
+                  key={member.user_id}
+                  style={styles.memberRow}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/user/[id]',
+                      params: { id: member.user_id },
+                    })
+                  }
+                >
                   {/* Avatar */}
                   {member.avatar_url ? (
                     <Image source={{ uri: member.avatar_url }} style={styles.avatar} />
@@ -233,36 +269,59 @@ export default function GroupDetailScreen() {
                       <Text style={styles.memberAdminBadgeText}>Beheerder</Text>
                     </View>
                   )}
-                </View>
+
+                  <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+                </TouchableOpacity>
               );
             })
           )}
         </View>
       </ScrollView>
 
-      {/* Leave / Delete button */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.leaveButton, isAdmin && styles.deleteButton]}
-          onPress={handleLeaveGroup}
-          disabled={leaving}
-        >
-          {leaving ? (
-            <ActivityIndicator color={Colors.text} />
+      {/* Footer: Join / Leave / Delete */}
+      {!loadingMembers && (
+        <View style={styles.footer}>
+          {isMember ? (
+            <TouchableOpacity
+              style={[styles.leaveButton, isAdmin && styles.deleteButton]}
+              onPress={handleLeaveGroup}
+              disabled={leaving}
+            >
+              {leaving ? (
+                <ActivityIndicator color={Colors.text} />
+              ) : (
+                <>
+                  <Ionicons
+                    name={isAdmin ? 'trash-outline' : 'exit-outline'}
+                    size={18}
+                    color={Colors.text}
+                  />
+                  <Text style={styles.leaveButtonText}>
+                    {isAdmin ? 'Groep verwijderen' : 'Groep verlaten'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           ) : (
-            <>
-              <Ionicons
-                name={isAdmin ? 'trash-outline' : 'exit-outline'}
-                size={18}
-                color={Colors.text}
-              />
-              <Text style={styles.leaveButtonText}>
-                {isAdmin ? 'Groep verwijderen' : 'Groep verlaten'}
-              </Text>
-            </>
+            <TouchableOpacity
+              style={[styles.joinButton, isFull && styles.joinButtonDisabled]}
+              onPress={handleJoinGroup}
+              disabled={isFull || joining}
+            >
+              {joining ? (
+                <ActivityIndicator color={Colors.text} />
+              ) : (
+                <>
+                  <Ionicons name="people" size={18} color={Colors.text} />
+                  <Text style={styles.joinButtonText}>
+                    {isFull ? 'Groep is vol' : 'Deelnemen aan groep'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           )}
-        </TouchableOpacity>
-      </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -424,6 +483,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#8B1A1A',
   },
   leaveButtonText: {
+    color: Colors.text,
+    fontSize: FontSizes.md,
+    fontWeight: 'bold',
+  },
+  joinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.full,
+    paddingVertical: Spacing.md,
+  },
+  joinButtonDisabled: {
+    backgroundColor: Colors.surfaceLight,
+  },
+  joinButtonText: {
     color: Colors.text,
     fontSize: FontSizes.md,
     fontWeight: 'bold',

@@ -45,6 +45,7 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="concert/[id]" />
       <Stack.Screen name="group/[id]" />
+      <Stack.Screen name="user/[id]" />
       <Stack.Screen name="edit-profile" />
     </Stack>
   );

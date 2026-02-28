@@ -199,7 +199,28 @@ export default function ConcertDetailScreen() {
             <Text style={styles.emptyGroups}>Nog geen groepen voor dit event. Maak er een aan!</Text>
           ) : (
             groups.map((group) => (
-              <View key={group.id} style={styles.groupCard}>
+              <TouchableOpacity
+                key={group.id}
+                style={styles.groupCard}
+                activeOpacity={0.75}
+                onPress={() =>
+                  router.push({
+                    pathname: '/group/[id]',
+                    params: {
+                      id: group.id,
+                      title: group.title,
+                      description: group.description ?? '',
+                      max_members: String(group.max_members),
+                      created_by: group.created_by,
+                      event_id: params.id,
+                      event_name: params.name,
+                      event_image_url: params.imageUrl ?? '',
+                      event_date: params.date ?? '',
+                      event_location: params.venue ? `${params.venue}, ${params.city}` : '',
+                    },
+                  })
+                }
+              >
                 <View style={styles.groupCardHeader}>
                   <Text style={styles.groupCardTitle} numberOfLines={1}>{group.title}</Text>
                   {group.created_by === user?.id && (
@@ -225,7 +246,7 @@ export default function ConcertDetailScreen() {
                   ) : (
                     <TouchableOpacity
                       style={[styles.joinButton, (group.member_count ?? 0) >= group.max_members && styles.joinButtonDisabled]}
-                      onPress={() => handleJoinGroup(group)}
+                      onPress={(e) => { e.stopPropagation(); handleJoinGroup(group); }}
                       disabled={(group.member_count ?? 0) >= group.max_members || joiningGroupId === group.id}
                     >
                       {joiningGroupId === group.id
@@ -235,7 +256,7 @@ export default function ConcertDetailScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
