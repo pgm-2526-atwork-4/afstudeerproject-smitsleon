@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Image,
     ScrollView,
     StyleSheet,
@@ -22,6 +23,10 @@ export default function UserProfileScreen() {
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [buddyCount, setBuddyCount] = useState(0);
+  const [buddyStatus, setBuddyStatus] = useState<'none' | 'pending_incoming' | 'pending_outgoing' | 'buddies'>('none');
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!id) return;
@@ -37,8 +42,53 @@ export default function UserProfileScreen() {
     } else {
       setProfile(data as UserProfile);
     }
+
+    // Fetch buddy count
+    const { data: countData } = await supabase.rpc('count_buddies', { user_id: id });
+    setBuddyCount(countData ?? 0);
+
+    // Check buddy status with current user
+    if (currentUser && currentUser.id !== id) {
+      // Check if already buddies
+      const { data: areBuddiesData } = await supabase.rpc('are_buddies', {
+        user_a: currentUser.id,
+        user_b: id,
+      });
+      if (areBuddiesData) {
+        setBuddyStatus('buddies');
+      } else {
+        // Check if there's an incoming request (they sent to me)
+        const { data: incomingRequest } = await supabase
+          .from('buddy_requests')
+          .select('id')
+          .eq('from_user_id', id)
+          .eq('to_user_id', currentUser.id)
+          .eq('status', 'pending')
+          .maybeSingle();
+        
+        if (incomingRequest) {
+          setBuddyStatus('pending_incoming');
+          setPendingRequestId(incomingRequest.id);
+        } else {
+          // Check if there's an outgoing request (I sent to them)
+          const { data: outgoingRequest } = await supabase
+            .from('buddy_requests')
+            .select('id')
+            .eq('from_user_id', currentUser.id)
+            .eq('to_user_id', id)
+            .eq('status', 'pending')
+            .maybeSingle();
+          
+          if (outgoingRequest) {
+            setBuddyStatus('pending_outgoing');
+            setPendingRequestId(outgoingRequest.id);
+          }
+        }
+      }
+    }
+
     setLoading(false);
-  }, [id]);
+  }, [id, currentUser]);
 
   useEffect(() => {
     fetchProfile();
@@ -72,6 +122,67 @@ export default function UserProfileScreen() {
   }
 
   const isOwnProfile = currentUser?.id === id;
+
+  async function handleSendBuddyRequest() {
+    if (!currentUser || !id) return;
+    setSending(true);
+    const { error } = await supabase
+      .from('buddy_requests')
+      .insert({ from_user_id: currentUser.id, to_user_id: id });
+    if (error) {
+      console.error('Error sending buddy request:', error);
+      Alert.alert('Fout', 'Kon buddy verzoek niet versturen. Probeer opnieuw.');
+    } else {
+      setBuddyStatus('pending_outgoing');
+      Alert.alert('Verstuurd', 'Buddy verzoek is verstuurd!');
+    }
+    setSending(false);
+  }
+
+  async function handleAcceptRequest() {
+    if (!pendingRequestId) return;
+    setSending(true);
+    const { error } = await supabase.rpc('accept_buddy_request', { request_id: pendingRequestId });
+    if (error) {
+      console.error('Error accepting request:', error);
+      Alert.alert('Fout', 'Kon verzoek niet accepteren. Probeer opnieuw.');
+    } else {
+      setBuddyStatus('buddies');
+      setBuddyCount(prev => prev + 1);
+    }
+    setSending(false);
+  }
+
+  async function handleDeclineRequest() {
+    if (!pendingRequestId) return;
+    setSending(true);
+    const { error } = await supabase.rpc('decline_buddy_request', { request_id: pendingRequestId });
+    if (error) {
+      console.error('Error declining request:', error);
+      Alert.alert('Fout', 'Kon verzoek niet weigeren. Probeer opnieuw.');
+    } else {
+      setBuddyStatus('none');
+      setPendingRequestId(null);
+    }
+    setSending(false);
+  }
+
+  async function handleWithdrawRequest() {
+    if (!pendingRequestId) return;
+    setSending(true);
+    const { error } = await supabase
+      .from('buddy_requests')
+      .delete()
+      .eq('id', pendingRequestId);
+    if (error) {
+      console.error('Error withdrawing request:', error);
+      Alert.alert('Fout', 'Kon verzoek niet intrekken. Probeer opnieuw.');
+    } else {
+      setBuddyStatus('none');
+      setPendingRequestId(null);
+    }
+    setSending(false);
+  }
 
   return (
     <View style={styles.container}>
@@ -112,6 +223,10 @@ export default function UserProfileScreen() {
               <Text style={styles.metaText}>{profile.city}</Text>
             </View>
           ) : null}
+          <View style={styles.metaItem}>
+            <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
+            <Text style={styles.metaText}>{buddyCount} {buddyCount === 1 ? 'buddy' : 'buddies'}</Text>
+          </View>
         </View>
 
         {/* Bio */}
@@ -142,6 +257,75 @@ export default function UserProfileScreen() {
             Lid sinds {new Date(profile.created_at).toLocaleDateString('nl-BE', { year: 'numeric', month: 'long' })}
           </Text>
         </View>
+
+        {/* Buddy request button */}
+        {!isOwnProfile && buddyStatus === 'none' && (
+          <TouchableOpacity
+            style={styles.buddyButton}
+            onPress={handleSendBuddyRequest}
+            disabled={sending}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={Colors.text} />
+            ) : (
+              <>
+                <Ionicons name="person-add-outline" size={20} color={Colors.text} />
+                <Text style={styles.buddyButtonText}>Buddy verzoek sturen</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+        {!isOwnProfile && buddyStatus === 'pending_incoming' && (
+          <View style={styles.buddyActionsGroup}>
+            <Text style={styles.pendingLabel}>{profile.first_name} wil jouw buddy worden</Text>
+            <View style={styles.buddyActionsRow}>
+              <TouchableOpacity
+                style={[styles.buddyActionButton, styles.acceptActionButton]}
+                onPress={handleAcceptRequest}
+                disabled={sending}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color={Colors.text} />
+                ) : (
+                  <Text style={styles.buddyActionText}>Accepteren</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.buddyActionButton, styles.declineActionButton]}
+                onPress={handleDeclineRequest}
+                disabled={sending}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color={Colors.text} />
+                ) : (
+                  <Text style={styles.buddyActionText}>Afwijzen</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        {!isOwnProfile && buddyStatus === 'pending_outgoing' && (
+          <TouchableOpacity
+            style={[styles.buddyButton, styles.buddyButtonDisabled]}
+            onPress={handleWithdrawRequest}
+            disabled={sending}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={Colors.textMuted} />
+            ) : (
+              <>
+                <Ionicons name="close-circle-outline" size={20} color={Colors.textMuted} />
+                <Text style={styles.buddyButtonTextDisabled}>Verzoek intrekken</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+        {!isOwnProfile && buddyStatus === 'buddies' && (
+          <View style={[styles.buddyButton, styles.buddyButtonSuccess]}>
+            <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+            <Text style={styles.buddyButtonTextSuccess}>Jullie zijn buddies</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -246,5 +430,70 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: FontSizes.sm,
     textAlign: 'center',
+  },
+  buddyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.full,
+    paddingVertical: Spacing.md,
+    marginTop: Spacing.lg,
+  },
+  buddyButtonText: {
+    color: Colors.text,
+    fontSize: FontSizes.md,
+    fontWeight: 'bold',
+  },
+  buddyButtonDisabled: {
+    backgroundColor: Colors.surface,
+  },
+  buddyButtonTextDisabled: {
+    color: Colors.textMuted,
+    fontSize: FontSizes.md,
+    fontWeight: 'bold',
+  },
+  buddyButtonSuccess: {
+    backgroundColor: 'rgba(29, 185, 84, 0.15)',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  buddyButtonTextSuccess: {
+    color: Colors.primary,
+    fontSize: FontSizes.md,
+    fontWeight: 'bold',
+  },
+  buddyActionsGroup: {
+    marginTop: Spacing.lg,
+    gap: Spacing.md,
+  },
+  pendingLabel: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.sm,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  buddyActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  buddyActionButton: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acceptActionButton: {
+    backgroundColor: Colors.primary,
+  },
+  declineActionButton: {
+    backgroundColor: Colors.error,
+  },
+  buddyActionText: {
+    color: Colors.text,
+    fontSize: FontSizes.md,
+    fontWeight: 'bold',
   },
 });

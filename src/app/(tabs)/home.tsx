@@ -1,8 +1,10 @@
+import { useAuth } from '@/core/AuthContext';
+import { supabase } from '@/core/supabase';
 import { Event } from '@/core/types';
 import { useConcerts } from '@/core/useConcerts';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
@@ -18,8 +20,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const { events, loading, error, searchConcerts } = useConcerts();
+  const { user } = useAuth();
   const [query, setQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) return;
+    const { count } = await supabase
+      .from('buddy_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('to_user_id', user.id)
+      .eq('status', 'pending');
+    setUnreadCount(count ?? 0);
+  }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchUnreadCount();
+    }, [fetchUnreadCount])
+  );
 
   const handleSearch = useCallback(() => {
     searchConcerts(query.trim() || undefined);
@@ -70,7 +90,20 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Concert Buddy</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Concert Buddy</Text>
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={() => router.push('/notifications')}
+        >
+          <Ionicons name="notifications-outline" size={24} color={Colors.text} />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* Search bar */}
       <View style={styles.searchRow}>
@@ -129,13 +162,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
+  },
   title: {
     color: Colors.text,
     fontSize: FontSizes.xxl,
     fontWeight: 'bold',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+  },
+  notificationButton: {
+    position: 'relative',
+    padding: Spacing.xs,
+  },
+  badge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: Colors.error,
+    borderRadius: Radius.full,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: Colors.text,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   searchRow: {
     flexDirection: 'row',

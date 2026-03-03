@@ -1,8 +1,10 @@
 import { useAuth } from '@/core/AuthContext';
+import { supabase } from '@/core/supabase';
 import { calculateAge } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
     Image,
     ScrollView,
@@ -14,8 +16,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, user } = useAuth();
   const router = useRouter();
+  const [buddyCount, setBuddyCount] = useState(0);
+
+  const fetchBuddyCount = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.rpc('count_buddies', { user_id: user.id });
+    setBuddyCount(data ?? 0);
+  }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchBuddyCount();
+    }, [fetchBuddyCount])
+  );
 
   if (!profile) {
     return (
@@ -60,6 +75,14 @@ export default function ProfileScreen() {
               <Text style={styles.metaText}>{profile.city}</Text>
             </View>
           ) : null}
+          <TouchableOpacity 
+            style={styles.metaItem}
+            onPress={() => router.push('/buddies')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
+            <Text style={styles.metaText}>{buddyCount} {buddyCount === 1 ? 'buddy' : 'buddies'}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Bio */}
