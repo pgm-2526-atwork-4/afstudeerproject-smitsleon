@@ -1,6 +1,7 @@
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { Event } from '@/core/types';
+import { searchAttractions } from '@/core/ticketmaster';
+import { Artist, Event } from '@/core/types';
 import { useConcerts } from '@/core/useConcerts';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +11,7 @@ import {
     ActivityIndicator,
     FlatList,
     Image,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -23,6 +25,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+  const [artistResults, setArtistResults] = useState<Artist[]>([]);
   const router = useRouter();
 
   const fetchUnreadCount = useCallback(async () => {
@@ -42,11 +45,18 @@ export default function HomeScreen() {
   );
 
   const handleSearch = useCallback(() => {
-    searchConcerts(query.trim() || undefined);
+    const q = query.trim();
+    searchConcerts(q || undefined);
+    if (q) {
+      searchAttractions(q).then(setArtistResults).catch(() => setArtistResults([]));
+    } else {
+      setArtistResults([]);
+    }
   }, [query]);
 
   const handleClear = useCallback(() => {
     setQuery('');
+    setArtistResults([]);
     searchConcerts();
   }, []);
 
@@ -128,6 +138,45 @@ export default function HomeScreen() {
           <Text style={styles.searchButtonText}>Zoek</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Artist results */}
+      {artistResults.length > 0 && (
+        <View style={styles.artistSection}>
+          <Text style={styles.artistSectionTitle}>Artiesten</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.artistScroll}>
+            {artistResults.map((artist) => (
+              <TouchableOpacity
+                key={artist.id}
+                style={styles.artistCard}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push({
+                    pathname: '/artist/[id]',
+                    params: {
+                      id: artist.id,
+                      name: artist.name,
+                      imageUrl: artist.imageUrl,
+                      genre: artist.genre,
+                    },
+                  })
+                }
+              >
+                {artist.imageUrl ? (
+                  <Image source={{ uri: artist.imageUrl }} style={styles.artistAvatar} />
+                ) : (
+                  <View style={[styles.artistAvatar, styles.artistAvatarPlaceholder]}>
+                    <Ionicons name="musical-notes" size={20} color={Colors.textMuted} />
+                  </View>
+                )}
+                <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
+                {artist.genre ? (
+                  <Text style={styles.artistGenre} numberOfLines={1}>{artist.genre}</Text>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Content */}
       {loading ? (
@@ -288,5 +337,48 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     fontSize: FontSizes.md,
+  },
+  artistSection: {
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    marginBottom: Spacing.sm,
+  },
+  artistSectionTitle: {
+    color: Colors.text,
+    fontSize: FontSizes.lg,
+    fontWeight: 'bold',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  artistScroll: {
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.md,
+  },
+  artistCard: {
+    alignItems: 'center',
+    width: 90,
+    gap: Spacing.xs,
+  },
+  artistAvatar: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: Colors.surfaceLight,
+  },
+  artistAvatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  artistName: {
+    color: Colors.text,
+    fontSize: FontSizes.xs,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  artistGenre: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    textAlign: 'center',
   },
 });

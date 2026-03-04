@@ -33,6 +33,14 @@ export interface Event {
   url?: string;
 }
 
+// Artist from Ticketmaster Attractions API
+export interface Artist {
+  id: string;
+  name: string;
+  imageUrl: string;
+  genre: string;
+}
+
 // User profile stored in Supabase
 export interface UserProfile {
   id: string;

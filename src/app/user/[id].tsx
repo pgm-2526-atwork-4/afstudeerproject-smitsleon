@@ -13,8 +13,15 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
+
+interface FavArtist {
+  id: string;
+  name: string;
+  image_url: string | null;
+  genre: string | null;
+}
 
 export default function UserProfileScreen() {
   const router = useRouter();
@@ -27,6 +34,8 @@ export default function UserProfileScreen() {
   const [buddyStatus, setBuddyStatus] = useState<'none' | 'pending_incoming' | 'pending_outgoing' | 'buddies'>('none');
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [favouriteArtists, setFavouriteArtists] = useState<FavArtist[]>([]);
+  const [favCount, setFavCount] = useState(0);
 
   const fetchProfile = useCallback(async () => {
     if (!id) return;
@@ -86,6 +95,31 @@ export default function UserProfileScreen() {
         }
       }
     }
+
+    // Fetch favourite artists
+    const { data: favData } = await supabase
+      .from('favourite_artists')
+      .select('artist_id, artists(id, name, image_url, genre)')
+      .eq('user_id', id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (favData) {
+      setFavouriteArtists(
+        favData.map((row: any) => ({
+          id: row.artists.id,
+          name: row.artists.name,
+          image_url: row.artists.image_url,
+          genre: row.artists.genre,
+        }))
+      );
+    }
+
+    const { count: fc } = await supabase
+      .from('favourite_artists')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', id);
+    setFavCount(fc ?? 0);
 
     setLoading(false);
   }, [id, currentUser]);
@@ -227,6 +261,10 @@ export default function UserProfileScreen() {
             <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
             <Text style={styles.metaText}>{buddyCount} {buddyCount === 1 ? 'buddy' : 'buddies'}</Text>
           </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="heart" size={14} color={Colors.error} />
+            <Text style={styles.metaText}>{favCount} {favCount === 1 ? 'artiest' : 'artiesten'}</Text>
+          </View>
         </View>
 
         {/* Bio */}
@@ -250,6 +288,49 @@ export default function UserProfileScreen() {
             </View>
           </View>
         ) : null}
+
+        {/* Top 5 artiesten */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="musical-notes" size={20} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>Top 5 artiesten</Text>
+          </View>
+          {favouriteArtists.length === 0 ? (
+            <Text style={styles.emptyText}>Nog geen favoriete artiesten.</Text>
+          ) : (
+            <View style={styles.artistsGrid}>
+              {favouriteArtists.map((artist) => (
+                <TouchableOpacity
+                  key={artist.id}
+                  style={styles.artistChip}
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/artist/[id]',
+                      params: {
+                        id: artist.id,
+                        name: artist.name,
+                        imageUrl: artist.image_url ?? '',
+                        genre: artist.genre ?? '',
+                      },
+                    })
+                  }
+                >
+                  {artist.image_url ? (
+                    <Image source={{ uri: artist.image_url }} style={styles.artistAvatar} />
+                  ) : (
+                    <View style={[styles.artistAvatar, styles.artistAvatarPlaceholder]}>
+                      <Ionicons name="musical-note" size={16} color={Colors.textMuted} />
+                    </View>
+                  )}
+                  <Text style={styles.artistChipName} numberOfLines={1}>
+                    {artist.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
 
         {/* Member since */}
         <View style={styles.section}>
@@ -393,6 +474,38 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: Spacing.xl,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  artistsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+  },
+  artistChip: {
+    alignItems: 'center',
+    width: 80,
+    gap: Spacing.xs,
+  },
+  artistAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.surfaceLight,
+  },
+  artistAvatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  artistChipName: {
+    color: Colors.text,
+    fontSize: FontSizes.xs,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   sectionTitle: {
     color: Colors.text,
