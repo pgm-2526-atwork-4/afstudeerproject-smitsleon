@@ -5,14 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -39,7 +39,6 @@ export default function ChatScreen() {
   const [groups, setGroups] = useState<GroupWithEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'upcoming' | 'past'>('upcoming');
 
   const fetchMyGroups = useCallback(async (isRefresh = false) => {
     if (!user) { setLoading(false); return; }
@@ -110,6 +109,7 @@ export default function ChatScreen() {
             )
           `)
           .in('group_id', groupIds)
+          .is('deleted_at', null)
           .order('created_at', { ascending: false });
 
         // Take the first (most recent) message per group
@@ -227,20 +227,6 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Mijn groepen</Text>
-        <View style={styles.filterRow}>
-          <TouchableOpacity
-            style={[styles.filterButton, filter === 'upcoming' && styles.filterButtonActive]}
-            onPress={() => setFilter('upcoming')}
-          >
-            <Text style={[styles.filterButtonText, filter === 'upcoming' && styles.filterButtonTextActive]}>Toekomstig</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filter === 'past' && styles.filterButtonActive]}
-            onPress={() => setFilter('past')}
-          >
-            <Text style={[styles.filterButtonText, filter === 'past' && styles.filterButtonTextActive]}>Afgelopen</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       {loading ? (
@@ -249,11 +235,7 @@ export default function ChatScreen() {
         </View>
       ) : (
         <FlatList
-          data={groups.filter((g) => {
-            if (!g.event_date) return filter === 'upcoming';
-            const eventDate = new Date(g.event_date);
-            return filter === 'upcoming' ? eventDate >= new Date() : eventDate < new Date();
-          })}
+          data={groups}
           keyExtractor={(item) => item.id}
           renderItem={renderGroup}
           contentContainerStyle={groups.length === 0 ? { flex: 1 } : styles.list}
@@ -288,32 +270,6 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   title: { color: Colors.text, fontSize: FontSizes.xxl, fontWeight: 'bold' },
-  filterRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
-  },
-  filterButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-  },
-  filterButtonActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterButtonText: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-  },
-  filterButtonTextActive: {
-    color: Colors.text,
-  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl, gap: Spacing.md },
   emptyTitle: { color: Colors.textSecondary, fontSize: FontSizes.lg, fontWeight: '600', textAlign: 'center' },
   emptySubtitle: { color: Colors.textMuted, fontSize: FontSizes.sm, textAlign: 'center', lineHeight: 20 },

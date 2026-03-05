@@ -6,17 +6,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Linking,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function ConcertDetailScreen() {
@@ -203,9 +203,10 @@ export default function ConcertDetailScreen() {
                 key={group.id}
                 style={styles.groupCard}
                 activeOpacity={0.75}
-                onPress={() =>
+                onPress={() => {
+                  const pathname = group.is_member ? '/group/chat' : '/group/[id]';
                   router.push({
-                    pathname: '/group/[id]',
+                    pathname,
                     params: {
                       id: group.id,
                       title: group.title,
@@ -218,8 +219,8 @@ export default function ConcertDetailScreen() {
                       event_date: params.date ?? '',
                       event_location: params.venue ? `${params.venue}, ${params.city}` : '',
                     },
-                  })
-                }
+                  });
+                }}
               >
                 <View style={styles.groupCardHeader}>
                   <Text style={styles.groupCardTitle} numberOfLines={1}>{group.title}</Text>

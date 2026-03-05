@@ -5,15 +5,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,6 +23,7 @@ interface Message {
   user_id: string;
   content: string;
   created_at: string;
+  deleted_at: string | null;
   first_name: string;
   last_name: string;
   avatar_url: string | null;
@@ -53,6 +55,7 @@ export default function GroupChatScreen() {
     user_id: row.user_id,
     content: row.content,
     created_at: row.created_at,
+    deleted_at: row.deleted_at ?? null,
     first_name: row.users?.first_name ?? '',
     last_name: row.users?.last_name ?? '',
     avatar_url: row.users?.avatar_url ?? null,
@@ -67,6 +70,7 @@ export default function GroupChatScreen() {
         user_id,
         content,
         created_at,
+        deleted_at,
         users (
           first_name,
           last_name,
@@ -98,7 +102,6 @@ export default function GroupChatScreen() {
           filter: `group_id=eq.${id}`,
         },
         async (payload) => {
-          // Fetch the full message with user info
           const { data } = await supabase
             .from('messages')
             .select(`
@@ -106,6 +109,7 @@ export default function GroupChatScreen() {
               user_id,
               content,
               created_at,
+              deleted_at,
               users (
                 first_name,
                 last_name,
@@ -117,11 +121,28 @@ export default function GroupChatScreen() {
 
           if (data) {
             setMessages((prev) => {
-              // Avoid duplicates (own messages already added optimistically)
               if (prev.some((m) => m.id === data.id)) return prev;
               return [...prev, parseMessage(data)];
             });
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `group_id=eq.${id}`,
+        },
+        (payload) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === payload.new.id
+                ? { ...m, content: payload.new.content, deleted_at: payload.new.deleted_at }
+                : m
+            )
+          );
         }
       )
       .subscribe();
@@ -153,6 +174,7 @@ export default function GroupChatScreen() {
         user_id,
         content,
         created_at,
+        deleted_at,
         users (
           first_name,
           last_name,
@@ -172,6 +194,30 @@ export default function GroupChatScreen() {
       });
     }
     setSending(false);
+  }
+
+  async function handleDeleteMessage(msgId: string) {
+    Alert.alert('Bericht verwijderen', 'Weet je zeker dat je dit bericht wilt verwijderen?', [
+      { text: 'Annuleren', style: 'cancel' },
+      {
+        text: 'Verwijderen',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase
+            .from('messages')
+            .update({ deleted_at: new Date().toISOString(), content: '' })
+            .eq('id', msgId);
+          if (error) {
+            console.error('Error deleting message:', error);
+            Alert.alert('Fout', 'Bericht verwijderen mislukt. Probeer opnieuw.');
+          } else {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === msgId ? { ...m, deleted_at: new Date().toISOString(), content: '' } : m))
+            );
+          }
+        },
+      },
+    ]);
   }
 
   function formatTime(dateStr: string) {
@@ -237,7 +283,7 @@ export default function GroupChatScreen() {
           </View>
         )}
 
-        <View style={[styles.messageRow, isOwn && styles.messageRowOwn]}>
+          <View style={[styles.messageRow, isOwn && styles.messageRowOwn]}>
           {!isOwn && showSender && (
             <TouchableOpacity
               onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.user_id } })}
@@ -253,9 +299,21 @@ export default function GroupChatScreen() {
           )}
           {!isOwn && !showSender && <View style={styles.messageAvatarSpacer} />}
 
-          <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
-            <Text style={styles.messageText}>{item.content}</Text>
-          </View>
+          {item.deleted_at ? (
+            <View style={[styles.bubble, styles.bubbleDeleted]}>
+              <Text style={styles.deletedText}>Dit bericht is verwijderd</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onLongPress={() => { if (isOwn) handleDeleteMessage(item.id); }}
+              delayLongPress={500}
+            >
+              <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
+                <Text style={styles.messageText}>{item.content}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Time below bubble — only if last in same-user/same-minute streak */}
@@ -452,6 +510,16 @@ const styles = StyleSheet.create({
   bubbleOther: {
     backgroundColor: Colors.surface,
     borderBottomLeftRadius: Spacing.xs,
+  },
+  bubbleDeleted: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  deletedText: {
+    color: Colors.textMuted,
+    fontSize: FontSizes.sm,
+    fontStyle: 'italic',
   },
   senderNameRow: {
     flexDirection: 'row',

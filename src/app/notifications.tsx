@@ -5,15 +5,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -56,7 +56,7 @@ export default function NotificationsScreen() {
         )
       `)
       .eq('to_user_id', user.id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'accepted'])
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -69,6 +69,7 @@ export default function NotificationsScreen() {
         last_name: row.users?.last_name ?? '',
         avatar_url: row.users?.avatar_url ?? null,
         created_at: row.created_at,
+        localStatus: row.status === 'accepted' ? 'accepted' as const : undefined,
       }));
       setRequests(parsed);
     }
@@ -159,25 +160,25 @@ export default function NotificationsScreen() {
         {!isAccepted && (
           <View style={styles.requestActions}>
             <TouchableOpacity
-              style={[styles.actionTextButton, styles.acceptButton]}
+              style={[styles.actionButton, styles.acceptButton]}
               onPress={() => handleAccept(item.id)}
               disabled={isProcessing}
             >
               {isProcessing ? (
                 <ActivityIndicator size="small" color={Colors.text} />
               ) : (
-                <Text style={styles.actionButtonText}>Goedkeuren</Text>
+                <Ionicons name="checkmark" size={22} color={Colors.text} />
               )}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionTextButton, styles.declineButton]}
+              style={[styles.actionButton, styles.declineButton]}
               onPress={() => handleDecline(item.id)}
               disabled={isProcessing}
             >
               {isProcessing ? (
                 <ActivityIndicator size="small" color={Colors.text} />
               ) : (
-                <Text style={styles.actionButtonText}>Afwijzen</Text>
+                <Ionicons name="close" size={22} color={Colors.text} />
               )}
             </TouchableOpacity>
           </View>
@@ -318,21 +319,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   requestActions: {
-    flexDirection: 'column',
-    gap: Spacing.xs,
-  },
-  actionTextButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 90,
-  },
-  actionButtonText: {
-    color: Colors.text,
-    fontSize: FontSizes.xs,
-    fontWeight: 'bold',
+    flexDirection: 'row',
+    gap: Spacing.sm,
   },
   actionButton: {
     width: 40,

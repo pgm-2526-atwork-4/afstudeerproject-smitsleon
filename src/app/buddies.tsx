@@ -2,7 +2,7 @@ import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
@@ -29,6 +29,9 @@ interface Buddy {
 export default function BuddiesScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { userId } = useLocalSearchParams<{ userId?: string }>();
+  const targetUserId = userId || user?.id;
+  const isOwnProfile = !userId || userId === user?.id;
   const [buddies, setBuddies] = useState<Buddy[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,7 +39,7 @@ export default function BuddiesScreen() {
   const [removing, setRemoving] = useState(false);
 
   const fetchBuddies = useCallback(async (isRefresh = false) => {
-    if (!user) {
+    if (!targetUserId) {
       setLoading(false);
       return;
     }
@@ -51,7 +54,7 @@ export default function BuddiesScreen() {
         user_id_2,
         created_at
       `)
-      .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`)
+      .or(`user_id_1.eq.${targetUserId},user_id_2.eq.${targetUserId}`)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -59,7 +62,7 @@ export default function BuddiesScreen() {
     } else {
       // Get the other user's ID for each buddy relationship
       const buddyIds = (data ?? []).map((row: any) => 
-        row.user_id_1 === user.id ? row.user_id_2 : row.user_id_1
+        row.user_id_1 === targetUserId ? row.user_id_2 : row.user_id_1
       );
 
       if (buddyIds.length > 0) {
@@ -87,7 +90,7 @@ export default function BuddiesScreen() {
 
     setLoading(false);
     setRefreshing(false);
-  }, [user]);
+  }, [targetUserId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -173,13 +176,15 @@ export default function BuddiesScreen() {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => setSelectedBuddy(item)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color={Colors.textSecondary} />
-        </TouchableOpacity>
+        {isOwnProfile && (
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={() => setSelectedBuddy(item)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="ellipsis-vertical" size={20} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -190,7 +195,7 @@ export default function BuddiesScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Mijn Buddies</Text>
+        <Text style={styles.title}>{isOwnProfile ? 'Mijn Buddies' : 'Buddies'}</Text>
       </View>
 
       {loading ? (

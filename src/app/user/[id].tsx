@@ -257,10 +257,14 @@ export default function UserProfileScreen() {
               <Text style={styles.metaText}>{profile.city}</Text>
             </View>
           ) : null}
-          <View style={styles.metaItem}>
+          <TouchableOpacity
+            style={styles.metaItem}
+            onPress={() => router.push({ pathname: '/buddies', params: { userId: id } })}
+            activeOpacity={0.7}
+          >
             <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
             <Text style={styles.metaText}>{buddyCount} {buddyCount === 1 ? 'buddy' : 'buddies'}</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.metaItem}>
             <Ionicons name="heart" size={14} color={Colors.error} />
             <Text style={styles.metaText}>{favCount} {favCount === 1 ? 'artiest' : 'artiesten'}</Text>
