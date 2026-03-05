@@ -300,11 +300,12 @@ export default function GroupChatScreen() {
           {!isOwn && !showSender && <View style={styles.messageAvatarSpacer} />}
 
           {item.deleted_at ? (
-            <View style={[styles.bubble, styles.bubbleDeleted]}>
+            <View style={[styles.bubbleWrapper, styles.bubble, styles.bubbleDeleted]}>
               <Text style={styles.deletedText}>Dit bericht is verwijderd</Text>
             </View>
           ) : (
             <TouchableOpacity
+              style={styles.bubbleWrapper}
               activeOpacity={0.8}
               onLongPress={() => { if (isOwn) handleDeleteMessage(item.id); }}
               delayLongPress={500}
@@ -474,7 +475,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     marginBottom: 2,
-    gap: Spacing.sm,
+    gap: 6,
   },
   messageRowOwn: {
     flexDirection: 'row-reverse',
@@ -497,19 +498,22 @@ const styles = StyleSheet.create({
   messageAvatarSpacer: {
     width: 28,
   },
+  bubbleWrapper: {
+    maxWidth: '80%',
+    flexShrink: 1,
+  },
   bubble: {
-    maxWidth: '75%',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
   },
   bubbleOwn: {
     backgroundColor: Colors.primary,
-    borderBottomRightRadius: Spacing.xs,
+    borderBottomRightRadius: 4,
   },
   bubbleOther: {
     backgroundColor: Colors.surface,
-    borderBottomLeftRadius: Spacing.xs,
+    borderBottomLeftRadius: 4,
   },
   bubbleDeleted: {
     backgroundColor: 'transparent',
