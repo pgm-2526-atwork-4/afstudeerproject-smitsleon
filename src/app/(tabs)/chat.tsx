@@ -5,47 +5,58 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface GroupWithEvent {
+// Unified chat item for both group chats and private chats
+interface ChatItem {
   id: string;
+  type: 'group' | 'private';
   title: string;
-  description: string | null;
-  max_members: number;
-  created_by: string;
-  member_count: number;
-  event_id: string;
-  event_name: string;
-  event_image_url: string | null;
-  event_date: string | null;
-  event_location: string | null;
+  image_url: string | null;
   last_message: string | null;
   last_message_sender: string | null;
   last_message_time: string | null;
+  // Group-specific
+  event_id?: string;
+  event_name?: string;
+  event_date?: string | null;
+  event_location?: string | null;
+  description?: string | null;
+  max_members?: number;
+  created_by?: string;
+  event_image_url?: string | null;
+  // Private-specific
+  buddy_user_id?: string;
+  buddy_first_name?: string;
+  buddy_last_name?: string;
+  buddy_avatar_url?: string | null;
 }
 
 export default function ChatScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [groups, setGroups] = useState<GroupWithEvent[]>([]);
+  const [chatItems, setChatItems] = useState<ChatItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchMyGroups = useCallback(async (isRefresh = false) => {
+  const fetchChats = useCallback(async (isRefresh = false) => {
     if (!user) { setLoading(false); return; }
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
 
-    const { data, error } = await supabase
+    const items: ChatItem[] = [];
+
+    // 1. Fetch group chats
+    const { data: groupData } = await supabase
       .from('group_members')
       .select(`
         group_id,
@@ -69,86 +80,117 @@ export default function ChatScreen() {
       .eq('user_id', user.id)
       .order('joined_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching groups:', error);
-    } else {
-      const parsed: GroupWithEvent[] = (data ?? [])
-        .map((row: any) => {
-          const g = row.groups;
-          if (!g) return null;
-          return {
-            id: g.id,
-            title: g.title,
-            description: g.description,
-            max_members: g.max_members,
-            created_by: g.created_by,
-            event_id: g.event_id,
-            member_count: g.member_count?.[0]?.count ?? 0,
-            event_name: g.events?.name ?? 'Onbekend concert',
-            event_image_url: g.events?.image_url ?? null,
-            event_date: g.events?.date ?? null,
-            event_location: g.events?.location_name ?? null,
-            last_message: null,
-            last_message_sender: null,
-            last_message_time: null,
-          };
-        })
-        .filter(Boolean) as GroupWithEvent[];
+    const groupItems: ChatItem[] = (groupData ?? [])
+      .map((row: any) => {
+        const g = row.groups;
+        if (!g) return null;
+        return {
+          id: g.id,
+          type: 'group' as const,
+          title: g.title,
+          image_url: g.events?.image_url ?? null,
+          last_message: null,
+          last_message_sender: null,
+          last_message_time: null,
+          event_id: g.event_id,
+          event_name: g.events?.name ?? 'Onbekend concert',
+          event_date: g.events?.date ?? null,
+          event_location: g.events?.location_name ?? null,
+          description: g.description,
+          max_members: g.max_members,
+          created_by: g.created_by,
+          event_image_url: g.events?.image_url ?? null,
+        };
+      })
+      .filter(Boolean) as ChatItem[];
 
-      // Fetch last message for each group
-      if (parsed.length > 0) {
-        const groupIds = parsed.map((g) => g.id);
-        const { data: msgData } = await supabase
-          .from('messages')
-          .select(`
-            group_id,
-            content,
-            created_at,
-            users (
-              first_name
-            )
-          `)
-          .in('group_id', groupIds)
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false });
+    // Fetch last message per group
+    if (groupItems.length > 0) {
+      const groupIds = groupItems.map((g) => g.id);
+      const { data: msgData } = await supabase
+        .from('messages')
+        .select(`group_id, content, created_at, users ( first_name )`)
+        .in('group_id', groupIds)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
 
-        // Take the first (most recent) message per group
-        const lastMessages = new Map<string, { content: string; sender: string; time: string }>();
-        for (const msg of (msgData ?? []) as any[]) {
-          if (!lastMessages.has(msg.group_id)) {
-            lastMessages.set(msg.group_id, {
-              content: msg.content,
-              sender: msg.users?.first_name ?? '',
-              time: msg.created_at,
-            });
-          }
+      const lastMessages = new Map<string, { content: string; sender: string; time: string }>();
+      for (const msg of (msgData ?? []) as any[]) {
+        if (!lastMessages.has(msg.group_id)) {
+          lastMessages.set(msg.group_id, {
+            content: msg.content,
+            sender: msg.users?.first_name ?? '',
+            time: msg.created_at,
+          });
         }
-
-        for (const group of parsed) {
-          const last = lastMessages.get(group.id);
-          if (last) {
-            group.last_message = last.content;
-            group.last_message_sender = last.sender;
-            group.last_message_time = last.time;
-          }
+      }
+      for (const group of groupItems) {
+        const last = lastMessages.get(group.id);
+        if (last) {
+          group.last_message = last.content;
+          group.last_message_sender = last.sender;
+          group.last_message_time = last.time;
         }
+      }
+    }
+    items.push(...groupItems);
 
-        // Sort: groups with recent messages first, then by joined_at
-        parsed.sort((a, b) => {
-          const timeA = a.last_message_time ? new Date(a.last_message_time).getTime() : 0;
-          const timeB = b.last_message_time ? new Date(b.last_message_time).getTime() : 0;
-          return timeB - timeA;
-        });
+    // 2. Fetch private chats (conversations with buddies where at least 1 message exists)
+    const { data: pmData } = await supabase
+      .from('private_messages')
+      .select('id, sender_id, receiver_id, content, created_at')
+      .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    if (pmData && pmData.length > 0) {
+      // Group by conversation partner
+      const convos = new Map<string, { content: string; time: string }>();
+      for (const msg of pmData as any[]) {
+        const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
+        if (!convos.has(partnerId)) {
+          convos.set(partnerId, { content: msg.content, time: msg.created_at });
+        }
       }
 
-      setGroups(parsed);
+      // Fetch partner user info
+      const partnerIds = Array.from(convos.keys());
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', partnerIds);
+
+      for (const partner of (usersData ?? []) as any[]) {
+        const lastMsg = convos.get(partner.id);
+        items.push({
+          id: `pm-${partner.id}`,
+          type: 'private',
+          title: `${partner.first_name} ${partner.last_name}`,
+          image_url: partner.avatar_url ?? null,
+          last_message: lastMsg?.content ?? null,
+          last_message_sender: null,
+          last_message_time: lastMsg?.time ?? null,
+          buddy_user_id: partner.id,
+          buddy_first_name: partner.first_name,
+          buddy_last_name: partner.last_name,
+          buddy_avatar_url: partner.avatar_url ?? null,
+        });
+      }
     }
 
+    // Sort all items by last message time
+    items.sort((a, b) => {
+      const timeA = a.last_message_time ? new Date(a.last_message_time).getTime() : 0;
+      const timeB = b.last_message_time ? new Date(b.last_message_time).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    setChatItems(items);
     setLoading(false);
     setRefreshing(false);
   }, [user]);
 
-  useFocusEffect(useCallback(() => { fetchMyGroups(); }, [fetchMyGroups]));
+  useFocusEffect(useCallback(() => { fetchChats(); }, [fetchChats]));
 
   function formatMessageTime(dateStr: string) {
     const d = new Date(dateStr);
@@ -165,46 +207,83 @@ export default function ChatScreen() {
     return d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
   }
 
-  function renderGroup({ item }: { item: GroupWithEvent }) {
+  function handlePress(item: ChatItem) {
+    if (item.type === 'group') {
+      router.push({
+        pathname: '/group/chat',
+        params: {
+          id: item.id,
+          title: item.title,
+          description: item.description ?? '',
+          max_members: String(item.max_members ?? 0),
+          created_by: item.created_by ?? '',
+          event_id: item.event_id ?? '',
+          event_name: item.event_name ?? '',
+          event_image_url: item.event_image_url ?? '',
+          event_date: item.event_date ?? '',
+          event_location: item.event_location ?? '',
+        },
+      });
+    } else {
+      router.push({
+        pathname: '/private-chat',
+        params: {
+          userId: item.buddy_user_id!,
+          firstName: item.buddy_first_name!,
+          lastName: item.buddy_last_name!,
+          avatarUrl: item.buddy_avatar_url ?? '',
+        },
+      });
+    }
+  }
+
+  function renderChatItem({ item }: { item: ChatItem }) {
+    const initials = item.type === 'private'
+      ? `${(item.buddy_first_name ?? '').charAt(0)}${(item.buddy_last_name ?? '').charAt(0)}`.toUpperCase()
+      : '';
+
     return (
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.75}
-        onPress={() =>
-          router.push({
-            pathname: '/group/chat',
-            params: {
-              id: item.id,
-              title: item.title,
-              description: item.description ?? '',
-              max_members: String(item.max_members),
-              created_by: item.created_by,
-              event_id: item.event_id,
-              event_name: item.event_name,
-              event_image_url: item.event_image_url ?? '',
-              event_date: item.event_date ?? '',
-              event_location: item.event_location ?? '',
-            },
-          })
-        }
+        onPress={() => handlePress(item)}
       >
-        {/* Concert image thumbnail */}
+        {/* Image / Avatar */}
         <View style={styles.cardImageWrapper}>
-          {item.event_image_url ? (
-            <Image source={{ uri: item.event_image_url }} style={styles.cardImage} />
+          {item.type === 'group' ? (
+            item.image_url ? (
+              <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+            ) : (
+              <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
+                <Ionicons name="musical-notes" size={24} color={Colors.textMuted} />
+              </View>
+            )
           ) : (
-            <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
-              <Ionicons name="musical-notes" size={24} color={Colors.textMuted} />
-            </View>
+            item.image_url ? (
+              <Image source={{ uri: item.image_url }} style={styles.cardAvatar} />
+            ) : (
+              <View style={[styles.cardAvatar, styles.cardAvatarPlaceholder]}>
+                <Text style={styles.cardAvatarInitials}>{initials}</Text>
+              </View>
+            )
           )}
         </View>
 
         {/* Info */}
         <View style={styles.cardInfo}>
-          <Text style={styles.groupTitle} numberOfLines={1}>{item.title}</Text>
+          <View style={styles.titleRow}>
+            <Ionicons
+              name={item.type === 'group' ? 'people' : 'person'}
+              size={14}
+              color={Colors.textMuted}
+            />
+            <Text style={styles.chatTitle} numberOfLines={1}>{item.title}</Text>
+          </View>
           {item.last_message ? (
             <Text style={styles.lastMessage} numberOfLines={1}>
-              <Text style={styles.lastMessageSender}>{item.last_message_sender}: </Text>
+              {item.type === 'group' && item.last_message_sender ? (
+                <Text style={styles.lastMessageSender}>{item.last_message_sender}: </Text>
+              ) : null}
               {item.last_message}
             </Text>
           ) : (
@@ -226,7 +305,7 @@ export default function ChatScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Mijn groepen</Text>
+        <Text style={styles.title}>Berichten</Text>
       </View>
 
       {loading ? (
@@ -235,24 +314,24 @@ export default function ChatScreen() {
         </View>
       ) : (
         <FlatList
-          data={groups}
+          data={chatItems}
           keyExtractor={(item) => item.id}
-          renderItem={renderGroup}
-          contentContainerStyle={groups.length === 0 ? { flex: 1 } : styles.list}
+          renderItem={renderChatItem}
+          contentContainerStyle={chatItems.length === 0 ? { flex: 1 } : styles.list}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => fetchMyGroups(true)}
+              onRefresh={() => fetchChats(true)}
               tintColor={Colors.primary}
               colors={[Colors.primary]}
             />
           }
           ListEmptyComponent={
             <View style={styles.center}>
-              <Ionicons name="people-outline" size={48} color={Colors.textMuted} />
-              <Text style={styles.emptyTitle}>Nog geen groepen</Text>
+              <Ionicons name="chatbubbles-outline" size={48} color={Colors.textMuted} />
+              <Text style={styles.emptyTitle}>Nog geen berichten</Text>
               <Text style={styles.emptySubtitle}>
-                Ga naar een concert en sluit je aan bij een groep of maak er zelf een aan.
+                Sluit je aan bij een groep of stuur een buddy een bericht.
               </Text>
             </View>
           }
@@ -289,6 +368,8 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardImage: {
     width: '100%',
@@ -299,8 +380,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cardAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  cardAvatarPlaceholder: {
+    backgroundColor: Colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardAvatarInitials: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.md,
+    fontWeight: 'bold',
+  },
   cardInfo: { flex: 1, gap: 2, paddingVertical: Spacing.sm },
-  groupTitle: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  chatTitle: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold', flex: 1 },
   lastMessage: { color: Colors.textMuted, fontSize: FontSizes.sm },
   lastMessageSender: { color: Colors.textSecondary, fontWeight: '600' },
   cardRight: {
@@ -312,4 +413,3 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
   },
 });
-

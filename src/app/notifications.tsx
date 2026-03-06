@@ -48,6 +48,7 @@ export default function NotificationsScreen() {
       .select(`
         id,
         from_user_id,
+        status,
         created_at,
         users!buddy_requests_from_user_id_fkey (
           first_name,

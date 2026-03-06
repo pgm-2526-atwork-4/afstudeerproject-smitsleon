@@ -6,14 +6,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface FavArtist {
@@ -279,6 +279,108 @@ export default function UserProfileScreen() {
           </View>
         ) : null}
 
+        {/* Buddy actions — directly after bio */}
+        {!isOwnProfile && (
+          <View style={styles.buddyActionsWrapper}>
+            {buddyStatus === 'none' && (
+              <TouchableOpacity
+                style={styles.buddyButton}
+                onPress={handleSendBuddyRequest}
+                disabled={sending}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color={Colors.text} />
+                ) : (
+                  <>
+                    <Ionicons name="person-add-outline" size={20} color={Colors.text} />
+                    <Text style={styles.buddyButtonText}>Buddy verzoek sturen</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+            {buddyStatus === 'pending_incoming' && (
+              <View style={styles.buddyActionsGroup}>
+                <Text style={styles.pendingLabel}>{profile.first_name} wil jouw buddy worden</Text>
+                <View style={styles.buddyActionsRow}>
+                  <TouchableOpacity
+                    style={[styles.buddyActionButton, styles.acceptActionButton]}
+                    onPress={handleAcceptRequest}
+                    disabled={sending}
+                  >
+                    {sending ? (
+                      <ActivityIndicator size="small" color={Colors.text} />
+                    ) : (
+                      <Text style={styles.buddyActionText}>Accepteren</Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.buddyActionButton, styles.declineActionButton]}
+                    onPress={handleDeclineRequest}
+                    disabled={sending}
+                  >
+                    {sending ? (
+                      <ActivityIndicator size="small" color={Colors.text} />
+                    ) : (
+                      <Text style={styles.buddyActionText}>Afwijzen</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+            {buddyStatus === 'pending_outgoing' && (
+              <TouchableOpacity
+                style={[styles.buddyButton, styles.buddyButtonDisabled]}
+                onPress={handleWithdrawRequest}
+                disabled={sending}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color={Colors.textMuted} />
+                ) : (
+                  <>
+                    <Ionicons name="close-circle-outline" size={20} color={Colors.textMuted} />
+                    <Text style={styles.buddyButtonTextDisabled}>Verzoek intrekken</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+            {buddyStatus === 'buddies' && (
+              <View style={styles.buddyActionsGroup}>
+                <View style={[styles.buddyButton, styles.buddyButtonSuccess]}>
+                  <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                  <Text style={styles.buddyButtonTextSuccess}>Buddies</Text>
+                </View>
+                <View style={styles.buddyMessageRow}>
+                  <TouchableOpacity
+                    style={styles.messageButton}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/private-chat',
+                        params: {
+                          userId: id,
+                          firstName: profile.first_name,
+                          lastName: profile.last_name,
+                          avatarUrl: profile.avatar_url ?? '',
+                        },
+                      })
+                    }
+                  >
+                    <Ionicons name="chatbubble-outline" size={18} color={Colors.text} />
+                    <Text style={styles.messageButtonText}>Bericht sturen</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.buddyIconButton}
+                    activeOpacity={0.7}
+                    onPress={() => router.push({ pathname: '/buddies', params: { userId: id } })}
+                  >
+                    <Ionicons name="people-outline" size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Vibes */}
         {profile.vibe_tags && profile.vibe_tags.length > 0 ? (
           <View style={styles.section}>
@@ -342,75 +444,6 @@ export default function UserProfileScreen() {
             Lid sinds {new Date(profile.created_at).toLocaleDateString('nl-BE', { year: 'numeric', month: 'long' })}
           </Text>
         </View>
-
-        {/* Buddy request button */}
-        {!isOwnProfile && buddyStatus === 'none' && (
-          <TouchableOpacity
-            style={styles.buddyButton}
-            onPress={handleSendBuddyRequest}
-            disabled={sending}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color={Colors.text} />
-            ) : (
-              <>
-                <Ionicons name="person-add-outline" size={20} color={Colors.text} />
-                <Text style={styles.buddyButtonText}>Buddy verzoek sturen</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-        {!isOwnProfile && buddyStatus === 'pending_incoming' && (
-          <View style={styles.buddyActionsGroup}>
-            <Text style={styles.pendingLabel}>{profile.first_name} wil jouw buddy worden</Text>
-            <View style={styles.buddyActionsRow}>
-              <TouchableOpacity
-                style={[styles.buddyActionButton, styles.acceptActionButton]}
-                onPress={handleAcceptRequest}
-                disabled={sending}
-              >
-                {sending ? (
-                  <ActivityIndicator size="small" color={Colors.text} />
-                ) : (
-                  <Text style={styles.buddyActionText}>Accepteren</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.buddyActionButton, styles.declineActionButton]}
-                onPress={handleDeclineRequest}
-                disabled={sending}
-              >
-                {sending ? (
-                  <ActivityIndicator size="small" color={Colors.text} />
-                ) : (
-                  <Text style={styles.buddyActionText}>Afwijzen</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        {!isOwnProfile && buddyStatus === 'pending_outgoing' && (
-          <TouchableOpacity
-            style={[styles.buddyButton, styles.buddyButtonDisabled]}
-            onPress={handleWithdrawRequest}
-            disabled={sending}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color={Colors.textMuted} />
-            ) : (
-              <>
-                <Ionicons name="close-circle-outline" size={20} color={Colors.textMuted} />
-                <Text style={styles.buddyButtonTextDisabled}>Verzoek intrekken</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-        {!isOwnProfile && buddyStatus === 'buddies' && (
-          <View style={[styles.buddyButton, styles.buddyButtonSuccess]}>
-            <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
-            <Text style={styles.buddyButtonTextSuccess}>Jullie zijn buddies</Text>
-          </View>
-        )}
       </ScrollView>
     </View>
   );
@@ -548,6 +581,9 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     textAlign: 'center',
   },
+  buddyActionsWrapper: {
+    marginBottom: Spacing.xl,
+  },
   buddyButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -612,5 +648,33 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: FontSizes.md,
     fontWeight: 'bold',
+  },
+  buddyMessageRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    alignItems: 'center',
+  },
+  messageButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.full,
+    paddingVertical: Spacing.md,
+  },
+  messageButtonText: {
+    color: Colors.text,
+    fontSize: FontSizes.md,
+    fontWeight: 'bold',
+  },
+  buddyIconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -51,6 +51,7 @@ function RootNavigator() {
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="buddies" />
+      <Stack.Screen name="private-chat" />
       <Stack.Screen name="favourite-artists" />
     </Stack>
   );
