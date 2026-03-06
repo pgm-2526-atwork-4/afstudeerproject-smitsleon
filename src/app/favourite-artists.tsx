@@ -2,18 +2,19 @@ import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,47 +23,77 @@ interface FavouriteArtist {
   name: string;
   image_url: string | null;
   genre: string | null;
+  isFavourite: boolean;
 }
 
 export default function FavouriteArtistsScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { userId } = useLocalSearchParams<{ userId?: string }>();
+
+  // If userId is provided, show that user's artists; otherwise show own
+  const targetUserId = userId ?? user?.id;
+  const isOwnProfile = !userId || userId === user?.id;
+
   const [artists, setArtists] = useState<FavouriteArtist[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('');
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchFavourites = useCallback(
     async (isRefresh = false) => {
-      if (!user) {
+      if (!targetUserId) {
         setLoading(false);
         return;
       }
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
 
+      // Fetch target user's favourite artists
       const { data, error } = await supabase
         .from('favourite_artists')
         .select('artist_id, artists(id, name, image_url, genre)')
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching favourites:', error);
-      } else {
-        const parsed: FavouriteArtist[] = (data ?? []).map((row: any) => ({
-          id: row.artists.id,
-          name: row.artists.name,
-          image_url: row.artists.image_url,
-          genre: row.artists.genre,
-        }));
-        setArtists(parsed);
+        setLoading(false);
+        setRefreshing(false);
+        return;
       }
 
+      const parsed: FavouriteArtist[] = (data ?? []).map((row: any) => ({
+        id: row.artists.id,
+        name: row.artists.name,
+        image_url: row.artists.image_url,
+        genre: row.artists.genre,
+        isFavourite: true, // default for the target user
+      }));
+
+      // If viewing another user's list, check which artists the current user follows
+      if (!isOwnProfile && user) {
+        const artistIds = parsed.map((a) => a.id);
+        if (artistIds.length > 0) {
+          const { data: myFavs } = await supabase
+            .from('favourite_artists')
+            .select('artist_id')
+            .eq('user_id', user.id)
+            .in('artist_id', artistIds);
+
+          const myFavSet = new Set((myFavs ?? []).map((f: any) => f.artist_id));
+          for (const artist of parsed) {
+            artist.isFavourite = myFavSet.has(artist.id);
+          }
+        }
+      }
+
+      setArtists(parsed);
       setLoading(false);
       setRefreshing(false);
     },
-    [user]
+    [targetUserId, user, isOwnProfile]
   );
 
   useFocusEffect(
@@ -71,6 +102,42 @@ export default function FavouriteArtistsScreen() {
     }, [fetchFavourites])
   );
 
+  async function toggleFavourite(artistId: string, currentlyFav: boolean) {
+    if (!user) return;
+    setTogglingId(artistId);
+
+    if (currentlyFav) {
+      // Remove from favourites
+      const { error } = await supabase
+        .from('favourite_artists')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('artist_id', artistId);
+
+      if (error) {
+        Alert.alert('Fout', 'Kon artiest niet verwijderen uit favorieten.');
+      } else {
+        setArtists((prev) =>
+          prev.map((a) => (a.id === artistId ? { ...a, isFavourite: false } : a))
+        );
+      }
+    } else {
+      // Add to favourites
+      const { error } = await supabase
+        .from('favourite_artists')
+        .insert({ user_id: user.id, artist_id: artistId });
+
+      if (error) {
+        Alert.alert('Fout', 'Kon artiest niet toevoegen aan favorieten.');
+      } else {
+        setArtists((prev) =>
+          prev.map((a) => (a.id === artistId ? { ...a, isFavourite: true } : a))
+        );
+      }
+    }
+    setTogglingId(null);
+  }
+
   const filteredArtists = filter.trim()
     ? artists.filter((a) =>
         a.name.toLowerCase().includes(filter.toLowerCase())
@@ -78,6 +145,8 @@ export default function FavouriteArtistsScreen() {
     : artists;
 
   function renderArtist({ item }: { item: FavouriteArtist }) {
+    const isToggling = togglingId === item.id;
+
     return (
       <TouchableOpacity
         style={styles.artistCard}
@@ -111,7 +180,27 @@ export default function FavouriteArtistsScreen() {
             </Text>
           ) : null}
         </View>
-        <Ionicons name="chevron-forward" size={20} color={Colors.textMuted} />
+
+        {/* Heart toggle (always visible) */}
+        <TouchableOpacity
+          style={styles.heartButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            toggleFavourite(item.id, item.isFavourite);
+          }}
+          disabled={isToggling}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          {isToggling ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <Ionicons
+              name={item.isFavourite ? 'heart' : 'heart-outline'}
+              size={24}
+              color={item.isFavourite ? Colors.primary : Colors.textMuted}
+            />
+          )}
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   }
@@ -274,5 +363,8 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: FontSizes.sm,
     marginTop: 2,
+  },
+  heartButton: {
+    padding: Spacing.xs,
   },
 });

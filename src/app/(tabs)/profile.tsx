@@ -6,12 +6,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -27,7 +27,6 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [buddyCount, setBuddyCount] = useState(0);
   const [favouriteArtists, setFavouriteArtists] = useState<FavArtist[]>([]);
-  const [favCount, setFavCount] = useState(0);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -41,8 +40,7 @@ export default function ProfileScreen() {
       .from('favourite_artists')
       .select('artist_id, artists(id, name, image_url, genre)')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(5);
+      .order('created_at', { ascending: false });
 
     if (favData) {
       const parsed: FavArtist[] = favData.map((row: any) => ({
@@ -54,12 +52,6 @@ export default function ProfileScreen() {
       setFavouriteArtists(parsed);
     }
 
-    // Total fav count
-    const { count } = await supabase
-      .from('favourite_artists')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id);
-    setFavCount(count ?? 0);
   }, [user]);
 
   useFocusEffect(
@@ -119,14 +111,6 @@ export default function ProfileScreen() {
             <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
             <Text style={styles.metaText}>{buddyCount} {buddyCount === 1 ? 'buddy' : 'buddies'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.metaItem}
-            onPress={() => router.push('/favourite-artists')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="heart" size={14} color={Colors.error} />
-            <Text style={styles.metaText}>{favCount} {favCount === 1 ? 'artiest' : 'artiesten'}</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Bio */}
@@ -151,17 +135,17 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        {/* Top 5 artiesten */}
+        {/* Favoriete artiesten */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="musical-notes" size={20} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>Top 5 artiesten</Text>
+            <Text style={styles.sectionTitle}>Favoriete artiesten</Text>
           </View>
           {favouriteArtists.length === 0 ? (
             <Text style={styles.emptyText}>Nog geen favoriete artiesten toegevoegd.</Text>
           ) : (
             <View style={styles.artistsGrid}>
-              {favouriteArtists.map((artist) => (
+              {favouriteArtists.slice(0, 5).map((artist) => (
                 <TouchableOpacity
                   key={artist.id}
                   style={styles.artistChip}
@@ -190,6 +174,18 @@ export default function ProfileScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
+              {favouriteArtists.length > 5 && (
+                <TouchableOpacity
+                  style={styles.artistChip}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/favourite-artists')}
+                >
+                  <View style={[styles.artistAvatar, styles.overflowChip]}>
+                    <Text style={styles.overflowChipText}>+{favouriteArtists.length - 5}</Text>
+                  </View>
+                  <Text style={styles.artistChipName} numberOfLines={1}>Meer</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -319,6 +315,18 @@ const styles = StyleSheet.create({
   artistAvatarPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  overflowChip: {
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  overflowChipText: {
+    color: Colors.primary,
+    fontSize: FontSizes.sm,
+    fontWeight: 'bold',
   },
   artistChipName: {
     color: Colors.text,

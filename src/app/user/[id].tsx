@@ -101,8 +101,7 @@ export default function UserProfileScreen() {
       .from('favourite_artists')
       .select('artist_id, artists(id, name, image_url, genre)')
       .eq('user_id', id)
-      .order('created_at', { ascending: false })
-      .limit(5);
+      .order('created_at', { ascending: false });
 
     if (favData) {
       setFavouriteArtists(
@@ -265,10 +264,6 @@ export default function UserProfileScreen() {
             <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
             <Text style={styles.metaText}>{buddyCount} {buddyCount === 1 ? 'buddy' : 'buddies'}</Text>
           </TouchableOpacity>
-          <View style={styles.metaItem}>
-            <Ionicons name="heart" size={14} color={Colors.error} />
-            <Text style={styles.metaText}>{favCount} {favCount === 1 ? 'artiest' : 'artiesten'}</Text>
-          </View>
         </View>
 
         {/* Bio */}
@@ -395,17 +390,17 @@ export default function UserProfileScreen() {
           </View>
         ) : null}
 
-        {/* Top 5 artiesten */}
+        {/* Favoriete artiesten */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="musical-notes" size={20} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>Top 5 artiesten</Text>
+            <Text style={styles.sectionTitle}>Favoriete artiesten</Text>
           </View>
           {favouriteArtists.length === 0 ? (
             <Text style={styles.emptyText}>Nog geen favoriete artiesten.</Text>
           ) : (
             <View style={styles.artistsGrid}>
-              {favouriteArtists.map((artist) => (
+              {favouriteArtists.slice(0, 5).map((artist) => (
                 <TouchableOpacity
                   key={artist.id}
                   style={styles.artistChip}
@@ -434,6 +429,18 @@ export default function UserProfileScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
+              {favouriteArtists.length > 5 && (
+                <TouchableOpacity
+                  style={styles.artistChip}
+                  activeOpacity={0.7}
+                  onPress={() => router.push({ pathname: '/favourite-artists', params: { userId: id } })}
+                >
+                  <View style={[styles.artistAvatar, styles.overflowChip]}>
+                    <Text style={styles.overflowChipText}>+{favouriteArtists.length - 5}</Text>
+                  </View>
+                  <Text style={styles.artistChipName} numberOfLines={1}>Meer</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -537,6 +544,18 @@ const styles = StyleSheet.create({
   artistAvatarPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  overflowChip: {
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  overflowChipText: {
+    color: Colors.primary,
+    fontSize: FontSizes.sm,
+    fontWeight: 'bold',
   },
   artistChipName: {
     color: Colors.text,
