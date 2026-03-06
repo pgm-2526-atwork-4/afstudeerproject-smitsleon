@@ -1,3 +1,6 @@
+import { EmptyState } from '@/components/design/EmptyState';
+import { LoadingScreen } from '@/components/design/LoadingScreen';
+import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -8,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -31,7 +33,6 @@ export default function FavouriteArtistsScreen() {
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId?: string }>();
 
-  // If userId is provided, show that user's artists; otherwise show own
   const targetUserId = userId ?? user?.id;
   const isOwnProfile = !userId || userId === user?.id;
 
@@ -41,165 +42,89 @@ export default function FavouriteArtistsScreen() {
   const [filter, setFilter] = useState('');
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  const fetchFavourites = useCallback(
-    async (isRefresh = false) => {
-      if (!targetUserId) {
-        setLoading(false);
-        return;
+  const fetchFavourites = useCallback(async (isRefresh = false) => {
+    if (!targetUserId) { setLoading(false); return; }
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+
+    const { data } = await supabase
+      .from('favourite_artists')
+      .select('artist_id, artists(id, name, image_url, genre)')
+      .eq('user_id', targetUserId)
+      .order('created_at', { ascending: false });
+
+    const parsed: FavouriteArtist[] = (data ?? []).map((row: any) => ({
+      id: row.artists.id,
+      name: row.artists.name,
+      image_url: row.artists.image_url,
+      genre: row.artists.genre,
+      isFavourite: true,
+    }));
+
+    if (!isOwnProfile && user) {
+      const artistIds = parsed.map((a) => a.id);
+      if (artistIds.length > 0) {
+        const { data: myFavs } = await supabase
+          .from('favourite_artists')
+          .select('artist_id')
+          .eq('user_id', user.id)
+          .in('artist_id', artistIds);
+        const myFavSet = new Set((myFavs ?? []).map((f: any) => f.artist_id));
+        for (const a of parsed) a.isFavourite = myFavSet.has(a.id);
       }
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+    }
 
-      // Fetch target user's favourite artists
-      const { data, error } = await supabase
-        .from('favourite_artists')
-        .select('artist_id, artists(id, name, image_url, genre)')
-        .eq('user_id', targetUserId)
-        .order('created_at', { ascending: false });
+    setArtists(parsed);
+    setLoading(false);
+    setRefreshing(false);
+  }, [targetUserId, user, isOwnProfile]);
 
-      if (error) {
-        console.error('Error fetching favourites:', error);
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
-
-      const parsed: FavouriteArtist[] = (data ?? []).map((row: any) => ({
-        id: row.artists.id,
-        name: row.artists.name,
-        image_url: row.artists.image_url,
-        genre: row.artists.genre,
-        isFavourite: true, // default for the target user
-      }));
-
-      // If viewing another user's list, check which artists the current user follows
-      if (!isOwnProfile && user) {
-        const artistIds = parsed.map((a) => a.id);
-        if (artistIds.length > 0) {
-          const { data: myFavs } = await supabase
-            .from('favourite_artists')
-            .select('artist_id')
-            .eq('user_id', user.id)
-            .in('artist_id', artistIds);
-
-          const myFavSet = new Set((myFavs ?? []).map((f: any) => f.artist_id));
-          for (const artist of parsed) {
-            artist.isFavourite = myFavSet.has(artist.id);
-          }
-        }
-      }
-
-      setArtists(parsed);
-      setLoading(false);
-      setRefreshing(false);
-    },
-    [targetUserId, user, isOwnProfile]
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchFavourites();
-    }, [fetchFavourites])
-  );
+  useFocusEffect(useCallback(() => { fetchFavourites(); }, [fetchFavourites]));
 
   async function toggleFavourite(artistId: string, currentlyFav: boolean) {
     if (!user) return;
     setTogglingId(artistId);
+    const { error } = currentlyFav
+      ? await supabase.from('favourite_artists').delete().eq('user_id', user.id).eq('artist_id', artistId)
+      : await supabase.from('favourite_artists').insert({ user_id: user.id, artist_id: artistId });
 
-    if (currentlyFav) {
-      // Remove from favourites
-      const { error } = await supabase
-        .from('favourite_artists')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('artist_id', artistId);
-
-      if (error) {
-        Alert.alert('Fout', 'Kon artiest niet verwijderen uit favorieten.');
-      } else {
-        setArtists((prev) =>
-          prev.map((a) => (a.id === artistId ? { ...a, isFavourite: false } : a))
-        );
-      }
+    if (error) {
+      Alert.alert('Fout', `Kon artiest niet ${currentlyFav ? 'verwijderen uit' : 'toevoegen aan'} favorieten.`);
     } else {
-      // Add to favourites
-      const { error } = await supabase
-        .from('favourite_artists')
-        .insert({ user_id: user.id, artist_id: artistId });
-
-      if (error) {
-        Alert.alert('Fout', 'Kon artiest niet toevoegen aan favorieten.');
-      } else {
-        setArtists((prev) =>
-          prev.map((a) => (a.id === artistId ? { ...a, isFavourite: true } : a))
-        );
-      }
+      setArtists((prev) =>
+        prev.map((a) => a.id === artistId ? { ...a, isFavourite: !currentlyFav } : a)
+      );
     }
     setTogglingId(null);
   }
 
-  const filteredArtists = filter.trim()
-    ? artists.filter((a) =>
-        a.name.toLowerCase().includes(filter.toLowerCase())
-      )
+  const filtered = filter.trim()
+    ? artists.filter((a) => a.name.toLowerCase().includes(filter.toLowerCase()))
     : artists;
 
   function renderArtist({ item }: { item: FavouriteArtist }) {
-    const isToggling = togglingId === item.id;
-
+    const initials = item.name.substring(0, 2).toUpperCase();
     return (
       <TouchableOpacity
-        style={styles.artistCard}
+        style={styles.card}
         activeOpacity={0.7}
-        onPress={() =>
-          router.push({
-            pathname: '/artist/[id]',
-            params: {
-              id: item.id,
-              name: item.name,
-              imageUrl: item.image_url ?? '',
-              genre: item.genre ?? '',
-            },
-          })
-        }
+        onPress={() => router.push({ pathname: '/artist/[id]', params: { id: item.id, name: item.name, imageUrl: item.image_url ?? '', genre: item.genre ?? '' } })}
       >
-        {item.image_url ? (
-          <Image source={{ uri: item.image_url }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Ionicons name="musical-notes" size={24} color={Colors.textMuted} />
-          </View>
-        )}
-        <View style={styles.artistInfo}>
-          <Text style={styles.artistName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          {item.genre ? (
-            <Text style={styles.artistGenre} numberOfLines={1}>
-              {item.genre}
-            </Text>
-          ) : null}
+        <UserAvatar uri={item.image_url} initials={initials} size={56} />
+        <View style={styles.info}>
+          <Text style={styles.artistName} numberOfLines={1}>{item.name}</Text>
+          {item.genre ? <Text style={styles.genre} numberOfLines={1}>{item.genre}</Text> : null}
         </View>
-
-        {/* Heart toggle (always visible) */}
         <TouchableOpacity
-          style={styles.heartButton}
-          onPress={(e) => {
-            e.stopPropagation();
-            toggleFavourite(item.id, item.isFavourite);
-          }}
-          disabled={isToggling}
+          style={styles.heartBtn}
+          onPress={(e) => { e.stopPropagation(); toggleFavourite(item.id, item.isFavourite); }}
+          disabled={togglingId === item.id}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          {isToggling ? (
-            <ActivityIndicator size="small" color={Colors.primary} />
-          ) : (
-            <Ionicons
-              name={item.isFavourite ? 'heart' : 'heart-outline'}
-              size={24}
-              color={item.isFavourite ? Colors.primary : Colors.textMuted}
-            />
-          )}
+          {togglingId === item.id
+            ? <ActivityIndicator size="small" color={Colors.primary} />
+            : <Ionicons name={item.isFavourite ? 'heart' : 'heart-outline'} size={24} color={item.isFavourite ? Colors.primary : Colors.textMuted} />
+          }
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -208,16 +133,15 @@ export default function FavouriteArtistsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Favoriete artiesten</Text>
       </View>
 
-      {/* Filter bar */}
       {artists.length > 0 && (
         <View style={styles.filterRow}>
-          <View style={styles.filterInputWrapper}>
+          <View style={styles.filterBox}>
             <Ionicons name="search" size={16} color={Colors.textMuted} />
             <TextInput
               style={styles.filterInput}
@@ -236,35 +160,22 @@ export default function FavouriteArtistsScreen() {
       )}
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
+        <LoadingScreen />
       ) : (
         <FlatList
-          data={filteredArtists}
+          data={filtered}
           keyExtractor={(item) => item.id}
           renderItem={renderArtist}
-          contentContainerStyle={filteredArtists.length === 0 ? { flex: 1 } : styles.list}
+          contentContainerStyle={filtered.length === 0 ? { flex: 1 } : styles.list}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchFavourites(true)}
-              tintColor={Colors.primary}
-              colors={[Colors.primary]}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={() => fetchFavourites(true)} tintColor={Colors.primary} colors={[Colors.primary]} />
           }
           ListEmptyComponent={
-            <View style={styles.center}>
-              <Ionicons name="heart-outline" size={48} color={Colors.textMuted} />
-              <Text style={styles.emptyTitle}>
-                {filter ? 'Geen resultaten' : 'Nog geen favoriete artiesten'}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {filter
-                  ? 'Probeer een andere zoekterm.'
-                  : 'Zoek een artiest en voeg ze toe aan je favorieten.'}
-              </Text>
-            </View>
+            <EmptyState
+              icon="heart-outline"
+              title={filter ? 'Geen resultaten' : 'Nog geen favoriete artiesten'}
+              subtitle={filter ? 'Probeer een andere zoekterm.' : 'Zoek een artiest en voeg ze toe aan je favorieten.'}
+            />
           }
         />
       )}
@@ -281,23 +192,13 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
     gap: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  backButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: Radius.full,
-    padding: Spacing.sm,
-  },
-  title: {
-    color: Colors.text,
-    fontSize: FontSizes.xxl,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  filterRow: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  filterInputWrapper: {
+  backBtn: { padding: Spacing.xs },
+  title: { color: Colors.text, fontSize: FontSizes.xl, fontWeight: 'bold', flex: 1 },
+  filterRow: { paddingHorizontal: Spacing.lg, marginVertical: Spacing.md },
+  filterBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surface,
@@ -307,33 +208,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     gap: Spacing.sm,
   },
-  filterInput: {
-    flex: 1,
-    color: Colors.text,
-    fontSize: FontSizes.sm,
-    paddingVertical: 10,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-    gap: Spacing.md,
-  },
-  emptyTitle: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.lg,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    color: Colors.textMuted,
-    fontSize: FontSizes.sm,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+  filterInput: { flex: 1, color: Colors.text, fontSize: FontSizes.sm, paddingVertical: 10 },
   list: { padding: Spacing.lg, gap: Spacing.sm },
-  artistCard: {
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surface,
@@ -343,28 +220,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     gap: Spacing.md,
   },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceLight,
-  },
-  avatarPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  artistInfo: { flex: 1 },
-  artistName: {
-    color: Colors.text,
-    fontSize: FontSizes.md,
-    fontWeight: 'bold',
-  },
-  artistGenre: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.sm,
-    marginTop: 2,
-  },
-  heartButton: {
-    padding: Spacing.xs,
-  },
+  info: { flex: 1 },
+  artistName: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
+  genre: { color: Colors.textSecondary, fontSize: FontSizes.sm, marginTop: 2 },
+  heartBtn: { padding: Spacing.xs },
 });

@@ -1,116 +1,80 @@
+import { ArtistChip, ArtistChipsGrid } from '@/components/design/ArtistChipsGrid';
+import { LoadingScreen } from '@/components/design/LoadingScreen';
+import { MetaItem } from '@/components/design/MetaItem';
+import { SectionHeader } from '@/components/design/SectionHeader';
+import { UserAvatar } from '@/components/design/UserAvatar';
+import { VibeTags } from '@/components/design/VibeTags';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { calculateAge } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-interface FavArtist {
-  id: string;
-  name: string;
-  image_url: string | null;
-  genre: string | null;
-}
 
 export default function ProfileScreen() {
   const { profile, signOut, user } = useAuth();
   const router = useRouter();
   const [buddyCount, setBuddyCount] = useState(0);
-  const [favouriteArtists, setFavouriteArtists] = useState<FavArtist[]>([]);
+  const [favouriteArtists, setFavouriteArtists] = useState<ArtistChip[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
 
-    // Buddy count
-    const { data: buddyData } = await supabase.rpc('count_buddies', { user_id: user.id });
-    setBuddyCount(buddyData ?? 0);
+    const [buddyRes, favRes] = await Promise.all([
+      supabase.rpc('count_buddies', { user_id: user.id }),
+      supabase
+        .from('favourite_artists')
+        .select('artist_id, artists(id, name, image_url, genre)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+    ]);
 
-    // Favourite artists
-    const { data: favData } = await supabase
-      .from('favourite_artists')
-      .select('artist_id, artists(id, name, image_url, genre)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    setBuddyCount(buddyRes.data ?? 0);
 
-    if (favData) {
-      const parsed: FavArtist[] = favData.map((row: any) => ({
-        id: row.artists.id,
-        name: row.artists.name,
-        image_url: row.artists.image_url,
-        genre: row.artists.genre,
-      }));
-      setFavouriteArtists(parsed);
+    if (favRes.data) {
+      setFavouriteArtists(
+        favRes.data.map((row: any) => ({
+          id: row.artists.id,
+          name: row.artists.name,
+          image_url: row.artists.image_url,
+          genre: row.artists.genre,
+        }))
+      );
     }
-
   }, [user]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [fetchData])
-  );
+  useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
 
-  if (!profile) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.center}>
-          <Text style={styles.emptyText}>Profiel laden...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  if (!profile) return <LoadingScreen />;
+
+  const initials = `${profile.first_name?.[0] ?? ''}${profile.last_name?.[0] ?? ''}`.toUpperCase();
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Avatar */}
         <View style={styles.avatarWrapper}>
-          {profile.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Ionicons name="person" size={48} color={Colors.textMuted} />
-            </View>
-          )}
+          <UserAvatar uri={profile.avatar_url} initials={initials} size={120} />
         </View>
 
         {/* Name */}
-        <Text style={styles.name}>
-          {profile.first_name} {profile.last_name}
-        </Text>
+        <Text style={styles.name}>{profile.first_name} {profile.last_name}</Text>
 
-        {/* Age, City, Buddies, Favourite Artists */}
+        {/* Meta row */}
         <View style={styles.metaRow}>
           {profile.birth_date ? (
-            <View style={styles.metaItem}>
-              <Ionicons name="calendar-outline" size={14} color={Colors.textSecondary} />
-              <Text style={styles.metaText}>{calculateAge(profile.birth_date)} jaar</Text>
-            </View>
+            <MetaItem icon="calendar-outline" label={`${calculateAge(profile.birth_date)} jaar`} />
           ) : null}
           {profile.city && profile.share_location !== false ? (
-            <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={14} color={Colors.textSecondary} />
-              <Text style={styles.metaText}>{profile.city}</Text>
-            </View>
+            <MetaItem icon="location-outline" label={profile.city} />
           ) : null}
-          <TouchableOpacity 
-            style={styles.metaItem}
+          <MetaItem
+            icon="people-outline"
+            label={`${buddyCount} ${buddyCount === 1 ? 'buddy' : 'buddies'}`}
             onPress={() => router.push('/buddies')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
-            <Text style={styles.metaText}>{buddyCount} {buddyCount === 1 ? 'buddy' : 'buddies'}</Text>
-          </TouchableOpacity>
+          />
         </View>
 
         {/* Bio */}
@@ -125,72 +89,31 @@ export default function ProfileScreen() {
         {profile.vibe_tags && profile.vibe_tags.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Vibes</Text>
-            <View style={styles.tagsRow}>
-              {profile.vibe_tags.map((tag) => (
-                <View key={tag} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
+            <VibeTags tags={profile.vibe_tags} />
           </View>
         ) : null}
 
         {/* Favoriete artiesten */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="musical-notes" size={20} color={Colors.primary} />
-            <Text style={styles.sectionTitle}>Favoriete artiesten</Text>
-          </View>
+          <SectionHeader icon="musical-notes" title="Favoriete artiesten" />
           {favouriteArtists.length === 0 ? (
             <Text style={styles.emptyText}>Nog geen favoriete artiesten toegevoegd.</Text>
           ) : (
-            <View style={styles.artistsGrid}>
-              {favouriteArtists.slice(0, 5).map((artist) => (
-                <TouchableOpacity
-                  key={artist.id}
-                  style={styles.artistChip}
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/artist/[id]',
-                      params: {
-                        id: artist.id,
-                        name: artist.name,
-                        imageUrl: artist.image_url ?? '',
-                        genre: artist.genre ?? '',
-                      },
-                    })
-                  }
-                >
-                  {artist.image_url ? (
-                    <Image source={{ uri: artist.image_url }} style={styles.artistAvatar} />
-                  ) : (
-                    <View style={[styles.artistAvatar, styles.artistAvatarPlaceholder]}>
-                      <Ionicons name="musical-note" size={16} color={Colors.textMuted} />
-                    </View>
-                  )}
-                  <Text style={styles.artistChipName} numberOfLines={1}>
-                    {artist.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              {favouriteArtists.length > 5 && (
-                <TouchableOpacity
-                  style={styles.artistChip}
-                  activeOpacity={0.7}
-                  onPress={() => router.push('/favourite-artists')}
-                >
-                  <View style={[styles.artistAvatar, styles.overflowChip]}>
-                    <Text style={styles.overflowChipText}>+{favouriteArtists.length - 5}</Text>
-                  </View>
-                  <Text style={styles.artistChipName} numberOfLines={1}>Meer</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+            <ArtistChipsGrid
+              artists={favouriteArtists}
+              maxVisible={5}
+              onArtistPress={(artist) =>
+                router.push({
+                  pathname: '/artist/[id]',
+                  params: { id: artist.id, name: artist.name, imageUrl: artist.image_url ?? '', genre: artist.genre ?? '' },
+                })
+              }
+              onMorePress={() => router.push('/favourite-artists')}
+            />
           )}
         </View>
 
-        {/* Profiel bewerken button */}
+        {/* Profiel bewerken */}
         <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit-profile')}>
           <Text style={styles.editButtonText}>Profiel bewerken</Text>
         </TouchableOpacity>
@@ -205,34 +128,9 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    paddingHorizontal: Spacing.xl,
-    paddingBottom: 40,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarWrapper: {
-    alignItems: 'center',
-    marginTop: Spacing.xl,
-    marginBottom: Spacing.md,
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-  avatarPlaceholder: {
-    backgroundColor: Colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  scroll: { paddingHorizontal: Spacing.xl, paddingBottom: 40 },
+  avatarWrapper: { alignItems: 'center', marginTop: Spacing.xl, marginBottom: Spacing.md },
   name: {
     color: Colors.text,
     fontSize: FontSizes.xl,
@@ -247,93 +145,15 @@ const styles = StyleSheet.create({
     gap: Spacing.lg,
     marginBottom: Spacing.lg,
   },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-  metaText: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.sm,
-  },
-  section: {
-    marginBottom: Spacing.xl,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
+  section: { marginBottom: Spacing.xl },
   sectionTitle: {
     color: Colors.text,
     fontSize: FontSizes.lg,
     fontWeight: 'bold',
     marginBottom: Spacing.sm,
   },
-  bioText: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.sm,
-    lineHeight: 22,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  tag: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
-  tagText: {
-    color: Colors.text,
-    fontSize: FontSizes.sm,
-    fontWeight: 'bold',
-  },
-  emptyText: {
-    color: Colors.textMuted,
-    fontSize: FontSizes.sm,
-  },
-  artistsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-  },
-  artistChip: {
-    alignItems: 'center',
-    width: 80,
-    gap: Spacing.xs,
-  },
-  artistAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.surfaceLight,
-  },
-  artistAvatarPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  overflowChip: {
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  overflowChipText: {
-    color: Colors.primary,
-    fontSize: FontSizes.sm,
-    fontWeight: 'bold',
-  },
-  artistChipName: {
-    color: Colors.text,
-    fontSize: FontSizes.xs,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
+  bioText: { color: Colors.textSecondary, fontSize: FontSizes.sm, lineHeight: 22 },
+  emptyText: { color: Colors.textMuted, fontSize: FontSizes.sm },
   editButton: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.full,
@@ -341,17 +161,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.md,
   },
-  editButtonText: {
-    color: Colors.text,
-    fontSize: FontSizes.md,
-    fontWeight: 'bold',
-  },
-  logoutButton: {
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: Colors.error,
-    fontSize: FontSizes.sm,
-  },
+  editButtonText: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
+  logoutButton: { paddingVertical: Spacing.md, alignItems: 'center' },
+  logoutText: { color: Colors.error, fontSize: FontSizes.sm },
 });

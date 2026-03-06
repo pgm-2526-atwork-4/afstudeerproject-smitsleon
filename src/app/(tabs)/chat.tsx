@@ -1,3 +1,4 @@
+import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -259,13 +260,7 @@ export default function ChatScreen() {
               </View>
             )
           ) : (
-            item.image_url ? (
-              <Image source={{ uri: item.image_url }} style={styles.cardAvatar} />
-            ) : (
-              <View style={[styles.cardAvatar, styles.cardAvatarPlaceholder]}>
-                <Text style={styles.cardAvatarInitials}>{initials}</Text>
-              </View>
-            )
+            <UserAvatar uri={item.image_url} initials={initials} size={52} />
           )}
         </View>
 
@@ -380,21 +375,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-  },
-  cardAvatarPlaceholder: {
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardAvatarInitials: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.md,
-    fontWeight: 'bold',
-  },
+
   cardInfo: { flex: 1, gap: 2, paddingVertical: Spacing.sm },
   titleRow: {
     flexDirection: 'row',

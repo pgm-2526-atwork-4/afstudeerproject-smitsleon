@@ -1,3 +1,6 @@
+import { ChatBubble } from '@/components/design/ChatBubble';
+import { ChatInput } from '@/components/design/ChatInput';
+import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -7,12 +10,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -288,33 +289,17 @@ export default function GroupChatScreen() {
             <TouchableOpacity
               onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.user_id } })}
             >
-              {item.avatar_url ? (
-                <Image source={{ uri: item.avatar_url }} style={styles.messageAvatar} />
-              ) : (
-                <View style={[styles.messageAvatar, styles.messageAvatarPlaceholder]}>
-                  <Text style={styles.messageAvatarInitials}>{initials}</Text>
-                </View>
-              )}
+              <UserAvatar uri={item.avatar_url} initials={initials} size={28} />
             </TouchableOpacity>
           )}
           {!isOwn && !showSender && <View style={styles.messageAvatarSpacer} />}
 
-          {item.deleted_at ? (
-            <View style={[styles.bubbleWrapper, styles.bubble, styles.bubbleDeleted]}>
-              <Text style={styles.deletedText}>Dit bericht is verwijderd</Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.bubbleWrapper}
-              activeOpacity={0.8}
-              onLongPress={() => { if (isOwn) handleDeleteMessage(item.id); }}
-              delayLongPress={500}
-            >
-              <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
-                <Text style={styles.messageText}>{item.content}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          <ChatBubble
+            content={item.content}
+            isOwn={isOwn}
+            isDeleted={!!item.deleted_at}
+            onLongPress={isOwn ? () => handleDeleteMessage(item.id) : undefined}
+          />
         </View>
 
         {/* Time below bubble — only if last in same-user/same-minute streak */}
@@ -385,25 +370,7 @@ export default function GroupChatScreen() {
         }
       />
 
-      {/* Input */}
-      <View style={styles.inputBar}>
-        <TextInput
-          style={styles.textInput}
-          placeholder="Schrijf een bericht..."
-          placeholderTextColor={Colors.textMuted}
-          value={text}
-          onChangeText={setText}
-          multiline
-          maxLength={1000}
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, !text.trim() && styles.sendButtonDisabled]}
-          onPress={handleSend}
-          disabled={!text.trim() || sending}
-        >
-          <Ionicons name="send" size={20} color={Colors.text} />
-        </TouchableOpacity>
-      </View>
+      <ChatInput value={text} onChange={setText} onSend={handleSend} sending={sending} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -480,50 +447,8 @@ const styles = StyleSheet.create({
   messageRowOwn: {
     flexDirection: 'row-reverse',
   },
-  messageAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: Radius.full,
-  },
-  messageAvatarPlaceholder: {
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  messageAvatarInitials: {
-    color: Colors.textSecondary,
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
   messageAvatarSpacer: {
     width: 28,
-  },
-  bubbleWrapper: {
-    maxWidth: '80%',
-    flexShrink: 1,
-  },
-  bubble: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-  },
-  bubbleOwn: {
-    backgroundColor: Colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  bubbleOther: {
-    backgroundColor: Colors.surface,
-    borderBottomLeftRadius: 4,
-  },
-  bubbleDeleted: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  deletedText: {
-    color: Colors.textMuted,
-    fontSize: FontSizes.sm,
-    fontStyle: 'italic',
   },
   senderNameRow: {
     flexDirection: 'row',
@@ -536,11 +461,6 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     fontWeight: '700',
   },
-  messageText: {
-    color: Colors.text,
-    fontSize: FontSizes.md,
-    lineHeight: 20,
-  },
   timeRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -552,39 +472,5 @@ const styles = StyleSheet.create({
   messageTime: {
     color: Colors.textMuted,
     fontSize: 10,
-  },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.background,
-    gap: Spacing.sm,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    color: Colors.text,
-    fontSize: FontSizes.md,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    maxHeight: 100,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sendButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-    padding: Spacing.sm,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: Colors.surfaceLight,
   },
 });

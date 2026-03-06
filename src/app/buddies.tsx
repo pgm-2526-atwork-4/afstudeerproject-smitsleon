@@ -1,3 +1,6 @@
+import { EmptyState } from '@/components/design/EmptyState';
+import { LoadingScreen } from '@/components/design/LoadingScreen';
+import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -8,7 +11,6 @@ import {
     ActivityIndicator,
     Alert,
     FlatList,
-    Image,
     Modal,
     RefreshControl,
     StyleSheet,
@@ -23,7 +25,6 @@ interface Buddy {
   first_name: string;
   last_name: string;
   avatar_url: string | null;
-  created_at: string;
 }
 
 export default function BuddiesScreen() {
@@ -32,6 +33,7 @@ export default function BuddiesScreen() {
   const { userId } = useLocalSearchParams<{ userId?: string }>();
   const targetUserId = userId || user?.id;
   const isOwnProfile = !userId || userId === user?.id;
+
   const [buddies, setBuddies] = useState<Buddy[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,68 +41,45 @@ export default function BuddiesScreen() {
   const [removing, setRemoving] = useState(false);
 
   const fetchBuddies = useCallback(async (isRefresh = false) => {
-    if (!targetUserId) {
-      setLoading(false);
-      return;
-    }
+    if (!targetUserId) { setLoading(false); return; }
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
 
-    // Fetch buddies where current user is either user_id_1 or user_id_2
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('buddies')
-      .select(`
-        user_id_1,
-        user_id_2,
-        created_at
-      `)
-      .or(`user_id_1.eq.${targetUserId},user_id_2.eq.${targetUserId}`)
-      .order('created_at', { ascending: false });
+      .select('user_id_1, user_id_2')
+      .or(`user_id_1.eq.${targetUserId},user_id_2.eq.${targetUserId}`);
 
-    if (error) {
-      console.error('Error fetching buddies:', error);
-    } else {
-      // Get the other user's ID for each buddy relationship
-      const buddyIds = (data ?? []).map((row: any) => 
-        row.user_id_1 === targetUserId ? row.user_id_2 : row.user_id_1
-      );
+    const buddyIds = (data ?? []).map((row: any) =>
+      row.user_id_1 === targetUserId ? row.user_id_2 : row.user_id_1
+    );
 
-      if (buddyIds.length > 0) {
-        // Fetch user details for all buddies
-        const { data: usersData } = await supabase
-          .from('users')
-          .select('id, first_name, last_name, avatar_url')
-          .in('id', buddyIds);
+    if (buddyIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', buddyIds);
 
-        const parsed: Buddy[] = (usersData ?? []).map((u: any) => ({
+      setBuddies(
+        (usersData ?? []).map((u: any) => ({
           user_id: u.id,
           first_name: u.first_name ?? '',
           last_name: u.last_name ?? '',
           avatar_url: u.avatar_url ?? null,
-          created_at: data?.find((b: any) => 
-            b.user_id_1 === u.id || b.user_id_2 === u.id
-          )?.created_at ?? '',
-        }));
-
-        setBuddies(parsed);
-      } else {
-        setBuddies([]);
-      }
+        }))
+      );
+    } else {
+      setBuddies([]);
     }
 
     setLoading(false);
     setRefreshing(false);
   }, [targetUserId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchBuddies();
-    }, [fetchBuddies])
-  );
+  useFocusEffect(useCallback(() => { fetchBuddies(); }, [fetchBuddies]));
 
   async function handleRemoveBuddy() {
     if (!user || !selectedBuddy) return;
-
     Alert.alert(
       'Buddy verwijderen',
       `Weet je zeker dat je ${selectedBuddy.first_name} ${selectedBuddy.last_name} als buddy wilt verwijderen?`,
@@ -111,39 +90,18 @@ export default function BuddiesScreen() {
           style: 'destructive',
           onPress: async () => {
             setRemoving(true);
-            
-            // Delete the buddy relationship (need to check both orderings)
-            const userId1 = user.id < selectedBuddy.user_id ? user.id : selectedBuddy.user_id;
-            const userId2 = user.id < selectedBuddy.user_id ? selectedBuddy.user_id : user.id;
-            
-            const { error } = await supabase
-              .from('buddies')
-              .delete()
-              .eq('user_id_1', userId1)
-              .eq('user_id_2', userId2);
-
+            const uid1 = user.id < selectedBuddy.user_id ? user.id : selectedBuddy.user_id;
+            const uid2 = user.id < selectedBuddy.user_id ? selectedBuddy.user_id : user.id;
+            const { error } = await supabase.from('buddies').delete().eq('user_id_1', uid1).eq('user_id_2', uid2);
             if (error) {
-              console.error('Error removing buddy:', error);
-              Alert.alert('Fout', 'Kon buddy niet verwijderen. Probeer opnieuw.');
+              Alert.alert('Fout', 'Kon buddy niet verwijderen.');
             } else {
-              // Also delete any buddy_requests between these users (in both directions)
-              // Direction 1: current user -> selected buddy
-              await supabase
-                .from('buddy_requests')
-                .delete()
-                .eq('from_user_id', user.id)
-                .eq('to_user_id', selectedBuddy.user_id);
-              
-              // Direction 2: selected buddy -> current user
-              await supabase
-                .from('buddy_requests')
-                .delete()
-                .eq('from_user_id', selectedBuddy.user_id)
-                .eq('to_user_id', user.id);
-              
+              await Promise.all([
+                supabase.from('buddy_requests').delete().eq('from_user_id', user.id).eq('to_user_id', selectedBuddy.user_id),
+                supabase.from('buddy_requests').delete().eq('from_user_id', selectedBuddy.user_id).eq('to_user_id', user.id),
+              ]);
               setBuddies((prev) => prev.filter((b) => b.user_id !== selectedBuddy.user_id));
             }
-            
             setRemoving(false);
             setSelectedBuddy(null);
           },
@@ -153,35 +111,19 @@ export default function BuddiesScreen() {
   }
 
   function renderBuddy({ item }: { item: Buddy }) {
-    const initials = `${item.first_name.charAt(0)}${item.last_name.charAt(0)}`.toUpperCase();
-
+    const initials = `${item.first_name[0] ?? ''}${item.last_name[0] ?? ''}`.toUpperCase();
     return (
-      <View style={styles.buddyCard}>
+      <View style={styles.card}>
         <TouchableOpacity
-          style={styles.buddyInfo}
+          style={styles.cardInfo}
           activeOpacity={0.7}
           onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.user_id } })}
         >
-          {item.avatar_url ? (
-            <Image source={{ uri: item.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            </View>
-          )}
-          <View style={styles.buddyText}>
-            <Text style={styles.buddyName}>
-              {item.first_name} {item.last_name}
-            </Text>
-          </View>
+          <UserAvatar uri={item.avatar_url} initials={initials} size={48} />
+          <Text style={styles.name}>{item.first_name} {item.last_name}</Text>
         </TouchableOpacity>
-
         {isOwnProfile && (
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={() => setSelectedBuddy(item)}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.menuBtn} onPress={() => setSelectedBuddy(item)}>
             <Ionicons name="ellipsis-vertical" size={20} color={Colors.textSecondary} />
           </TouchableOpacity>
         )}
@@ -192,16 +134,14 @@ export default function BuddiesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>{isOwnProfile ? 'Mijn Buddies' : 'Buddies'}</Text>
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
+        <LoadingScreen />
       ) : (
         <FlatList
           data={buddies}
@@ -209,51 +149,26 @@ export default function BuddiesScreen() {
           renderItem={renderBuddy}
           contentContainerStyle={buddies.length === 0 ? { flex: 1 } : styles.list}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => fetchBuddies(true)}
-              tintColor={Colors.primary}
-              colors={[Colors.primary]}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={() => fetchBuddies(true)} tintColor={Colors.primary} colors={[Colors.primary]} />
           }
           ListEmptyComponent={
-            <View style={styles.center}>
-              <Ionicons name="people-outline" size={48} color={Colors.textMuted} />
-              <Text style={styles.emptyTitle}>Nog geen buddies</Text>
-              <Text style={styles.emptySubtitle}>
-                Stuur buddy verzoeken naar andere gebruikers om buddies te worden.
-              </Text>
-            </View>
+            <EmptyState
+              icon="people-outline"
+              title="Nog geen buddies"
+              subtitle="Stuur buddy verzoeken naar andere gebruikers om buddies te worden."
+            />
           }
         />
       )}
 
-      {/* Menu Modal */}
-      <Modal
-        visible={selectedBuddy !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedBuddy(null)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectedBuddy(null)}
-        >
-          <View style={styles.menuModal}>
-            <TouchableOpacity
-              style={styles.menuOption}
-              onPress={handleRemoveBuddy}
-              disabled={removing}
-            >
-              {removing ? (
-                <ActivityIndicator size="small" color={Colors.error} />
-              ) : (
-                <>
-                  <Ionicons name="person-remove-outline" size={20} color={Colors.error} />
-                  <Text style={styles.menuOptionTextDanger}>Verwijder buddy</Text>
-                </>
-              )}
+      <Modal visible={selectedBuddy !== null} transparent animationType="fade" onRequestClose={() => setSelectedBuddy(null)}>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setSelectedBuddy(null)}>
+          <View style={styles.menu}>
+            <TouchableOpacity style={styles.menuOption} onPress={handleRemoveBuddy} disabled={removing}>
+              {removing
+                ? <ActivityIndicator size="small" color={Colors.error} />
+                : <><Ionicons name="person-remove-outline" size={20} color={Colors.error} /><Text style={styles.dangerText}>Verwijder buddy</Text></>
+              }
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -271,34 +186,13 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
     gap: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  backButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: Radius.full,
-    padding: Spacing.sm,
-  },
-  title: { color: Colors.text, fontSize: FontSizes.xxl, fontWeight: 'bold', flex: 1 },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-    gap: Spacing.md,
-  },
-  emptyTitle: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.lg,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    color: Colors.textMuted,
-    fontSize: FontSizes.sm,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+  backBtn: { padding: Spacing.xs },
+  title: { color: Colors.text, fontSize: FontSizes.xl, fontWeight: 'bold', flex: 1 },
   list: { padding: Spacing.lg, gap: Spacing.md },
-  buddyCard: {
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surface,
@@ -308,43 +202,11 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     gap: Spacing.md,
   },
-  buddyInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceLight,
-  },
-  avatarPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.md,
-    fontWeight: 'bold',
-  },
-  buddyText: { flex: 1 },
-  buddyName: {
-    color: Colors.text,
-    fontSize: FontSizes.md,
-    fontWeight: 'bold',
-  },
-  menuButton: {
-    padding: Spacing.sm,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  menuModal: {
+  cardInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  name: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
+  menuBtn: { padding: Spacing.sm },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  menu: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,
     padding: Spacing.sm,
@@ -352,16 +214,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  menuOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    padding: Spacing.md,
-    borderRadius: Radius.sm,
-  },
-  menuOptionTextDanger: {
-    color: Colors.error,
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-  },
+  menuOption: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.md, borderRadius: Radius.sm },
+  dangerText: { color: Colors.error, fontSize: FontSizes.md, fontWeight: '600' },
 });
