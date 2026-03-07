@@ -72,7 +72,7 @@ function toEvent(tm: TicketmasterEvent): Event {
 }
 
 // Only music events in Belgium
-export async function searchEvents(keyword?: string): Promise<Event[]> {
+export async function searchEvents(keyword?: string, options?: { latlong?: string; radius?: number }): Promise<Event[]> {
   const params = new URLSearchParams({
     apikey: API_KEY ?? '',
     countryCode: 'BE',
@@ -83,6 +83,11 @@ export async function searchEvents(keyword?: string): Promise<Event[]> {
 
   if (keyword) {
     params.set('keyword', keyword);
+  }
+  if (options?.latlong) {
+    params.set('latlong', options.latlong);
+    params.set('radius', String(options.radius ?? 50));
+    params.set('unit', 'km');
   }
 
   const response = await fetch(`${BASE_URL}/events.json?${params}`);
