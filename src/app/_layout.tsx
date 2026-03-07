@@ -1,35 +1,16 @@
 import { AuthProvider, useAuth } from '@/core/AuthContext';
 import { Colors } from '@/style/theme';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Redirect, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
-  const router = useRouter();
   const segments = useSegments();
 
-  useEffect(() => {
-    if (loading) return;
-
-    const inAuthGroup = segments[0] === '(auth)';
-    const inOnboarding = segments[0] === 'onboarding';
-
-    if (!session) {
-      // Not logged in → go to login
-      if (!inAuthGroup) router.replace('/(auth)/login');
-    } else if (!profile || !profile.first_name) {
-      // Logged in but no profile → go to onboarding
-      if (!inOnboarding) router.replace('/onboarding');
-    } else {
-      // Logged in with profile → go to app
-      if (inAuthGroup || inOnboarding) router.replace('/(tabs)/home');
-    }
-  }, [session, profile, loading, segments]);
-
+  // Show loading spinner while auth state is being determined
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
@@ -38,11 +19,25 @@ function RootNavigator() {
     );
   }
 
+  const inAuthGroup = segments[0] === '(auth)';
+  const inOnboarding = segments[0] === 'onboarding';
+
+  // Synchronous redirects using Redirect component (no flash)
+  if (!session && !inAuthGroup) {
+    return <Redirect href="/(auth)/login" />;
+  }
+  if (session && (!profile || !profile.first_name) && !inOnboarding) {
+    return <Redirect href="/onboarding" />;
+  }
+  if (session && profile?.first_name && (inAuthGroup || inOnboarding)) {
+    return <Redirect href="/(tabs)/home" />;
+  }
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="onboarding" />
-      <Stack.Screen name="(tabs)" />
       <Stack.Screen name="concert/[id]" />
       <Stack.Screen name="group/[id]" />
       <Stack.Screen name="group/chat" />
@@ -53,6 +48,7 @@ function RootNavigator() {
       <Stack.Screen name="buddies" />
       <Stack.Screen name="private-chat" />
       <Stack.Screen name="favourite-artists" />
+      <Stack.Screen name="section-events" />
     </Stack>
   );
 }
