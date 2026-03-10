@@ -1,8 +1,8 @@
 import { ConcertSection } from '@/components/design/ConcertSection';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { searchAttractions } from '@/core/ticketmaster';
-import { Artist, Event } from '@/core/types';
+import { searchAttractions, searchVenues } from '@/core/ticketmaster';
+import { Artist, Event, Venue } from '@/core/types';
 import { useConcerts } from '@/core/useConcerts';
 import { useHomeSections } from '@/core/useHomeSections';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -30,6 +30,7 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [artistResults, setArtistResults] = useState<Artist[]>([]);
+  const [venueResults, setVenueResults] = useState<Venue[]>([]);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const router = useRouter();
 
@@ -56,12 +57,14 @@ export default function HomeScreen() {
       setIsSearchActive(true);
       searchConcerts(q);
       searchAttractions(q).then(setArtistResults).catch(() => setArtistResults([]));
+      searchVenues(q).then(setVenueResults).catch(() => setVenueResults([]));
     }
   }, [query]);
 
   const handleClear = useCallback(() => {
     setQuery('');
     setArtistResults([]);
+    setVenueResults([]);
     setIsSearchActive(false);
   }, []);
 
@@ -74,6 +77,7 @@ export default function HomeScreen() {
         date: event.date,
         time: event.time,
         venue: event.venue,
+        venueId: event.venueId,
         city: event.city,
         imageUrl: event.imageUrl,
         url: event.url ?? '',
@@ -163,6 +167,38 @@ export default function HomeScreen() {
                     )}
                     <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
                     {artist.genre ? <Text style={styles.artistGenre} numberOfLines={1}>{artist.genre}</Text> : null}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Venue results */}
+          {venueResults.length > 0 && (
+            <View style={styles.artistSection}>
+              <Text style={styles.artistSectionTitle}>Venues</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.artistScroll}>
+                {venueResults.map((venue) => (
+                  <TouchableOpacity
+                    key={venue.id}
+                    style={styles.artistCard}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/venue/[id]',
+                        params: { id: venue.id, name: venue.name, city: venue.city },
+                      })
+                    }
+                  >
+                    {venue.imageUrl ? (
+                      <Image source={{ uri: venue.imageUrl }} style={styles.artistAvatar} />
+                    ) : (
+                      <View style={[styles.artistAvatar, styles.artistAvatarPlaceholder]}>
+                        <Ionicons name="location" size={20} color={Colors.textMuted} />
+                      </View>
+                    )}
+                    <Text style={styles.artistName} numberOfLines={2}>{venue.name}</Text>
+                    {venue.city ? <Text style={styles.artistGenre} numberOfLines={1}>{venue.city}</Text> : null}
                   </TouchableOpacity>
                 ))}
               </ScrollView>

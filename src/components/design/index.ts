@@ -10,5 +10,7 @@ export { MetaItem } from './MetaItem';
 export { ScreenHeader } from './ScreenHeader';
 export { SectionHeader } from './SectionHeader';
 export { UserAvatar } from './UserAvatar';
+export { VenueChipsGrid } from './VenueChipsGrid';
+export type { VenueChip } from './VenueChipsGrid';
 export { VibeTags } from './VibeTags';
 

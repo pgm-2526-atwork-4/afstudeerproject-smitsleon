@@ -4,6 +4,7 @@ import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { MetaItem } from '@/components/design/MetaItem';
 import { SectionHeader } from '@/components/design/SectionHeader';
 import { UserAvatar } from '@/components/design/UserAvatar';
+import { VenueChip, VenueChipsGrid } from '@/components/design/VenueChipsGrid';
 import { VibeTags } from '@/components/design/VibeTags';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
@@ -37,18 +38,24 @@ export default function UserProfileScreen() {
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [favouriteArtists, setFavouriteArtists] = useState<ArtistChip[]>([]);
+  const [favouriteVenues, setFavouriteVenues] = useState<VenueChip[]>([]);
   const [showBuddyMenu, setShowBuddyMenu] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!id) return;
     setLoading(true);
 
-    const [profileRes, buddyCountRes, favRes] = await Promise.all([
+    const [profileRes, buddyCountRes, favRes, venueRes] = await Promise.all([
       supabase.from('users').select('*').eq('id', id).single(),
       supabase.rpc('count_buddies', { user_id: id }),
       supabase
         .from('favourite_artists')
         .select('artist_id, artists(id, name, image_url, genre)')
+        .eq('user_id', id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('favourite_venues')
+        .select('venue_id, venues(id, name, city, image_url)')
         .eq('user_id', id)
         .order('created_at', { ascending: false }),
     ]);
@@ -63,6 +70,17 @@ export default function UserProfileScreen() {
           name: row.artists.name,
           image_url: row.artists.image_url,
           genre: row.artists.genre,
+        }))
+      );
+    }
+
+    if (venueRes.data) {
+      setFavouriteVenues(
+        venueRes.data.map((row: any) => ({
+          id: row.venues.id,
+          name: row.venues.name,
+          city: row.venues.city,
+          image_url: row.venues.image_url,
         }))
       );
     }
@@ -319,6 +337,26 @@ export default function UserProfileScreen() {
                 })
               }
               onMorePress={() => router.push({ pathname: '/favourite-artists', params: { userId: id } })}
+            />
+          )}
+        </View>
+
+        {/* Favoriete venues */}
+        <View style={styles.section}>
+          <SectionHeader icon="location" title="Favoriete venues" />
+          {favouriteVenues.length === 0 ? (
+            <Text style={styles.emptyText}>Nog geen favoriete venues.</Text>
+          ) : (
+            <VenueChipsGrid
+              venues={favouriteVenues}
+              maxVisible={5}
+              onVenuePress={(venue) =>
+                router.push({
+                  pathname: '/venue/[id]',
+                  params: { id: venue.id, name: venue.name },
+                })
+              }
+              onMorePress={() => router.push({ pathname: '/favourite-venues', params: { userId: id } })}
             />
           )}
         </View>

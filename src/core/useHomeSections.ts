@@ -85,6 +85,7 @@ export function useHomeSections() {
         date: e.date ?? '',
         time: '',
         venue: e.location_name ?? 'Onbekend',
+        venueId: '',
         city: '',
         imageUrl: e.image_url ?? '',
       }));

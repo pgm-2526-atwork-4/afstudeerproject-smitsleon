@@ -28,6 +28,7 @@ export default function ConcertDetailScreen() {
     date: string;
     time: string;
     venue: string;
+    venueId: string;
     city: string;
     imageUrl: string;
     url: string;
@@ -171,7 +172,12 @@ export default function ConcertDetailScreen() {
 
           <View style={styles.infoRow}>
             <Ionicons name="location-outline" size={18} color={Colors.primary} />
-            <Text style={styles.infoText}>{params.venue}, {params.city}</Text>
+            <TouchableOpacity
+              onPress={() => params.venueId ? router.push({ pathname: '/venue/[id]', params: { id: params.venueId, name: params.venue, city: params.city } }) : undefined}
+              disabled={!params.venueId}
+            >
+              <Text style={[styles.infoText, params.venueId ? styles.linkText : undefined]}>{params.venue}, {params.city}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -342,6 +348,10 @@ const styles = StyleSheet.create({
   infoText: {
     color: Colors.text,
     fontSize: FontSizes.md,
+  },
+  linkText: {
+    color: Colors.primary,
+    textDecorationLine: 'underline',
   },
   ticketButton: {
     flexDirection: 'row',

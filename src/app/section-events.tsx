@@ -74,6 +74,7 @@ export default function SectionEventsScreen() {
           date: e.date ?? '',
           time: '',
           venue: e.location_name ?? 'Onbekend',
+          venueId: e.venue_id ?? '',
           city: '',
           imageUrl: e.image_url ?? '',
         }));
@@ -139,6 +140,7 @@ export default function SectionEventsScreen() {
         date: event.date,
         time: event.time,
         venue: event.venue,
+        venueId: event.venueId,
         city: event.city,
         imageUrl: event.imageUrl,
         url: event.url ?? '',

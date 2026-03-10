@@ -1,97 +1,118 @@
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { searchEvents } from '@/core/ticketmaster';
+import { getVenue, getVenueEvents } from '@/core/ticketmaster';
 import { Event } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Linking,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
-export default function ArtistProfileScreen() {
+export default function VenueDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const params = useLocalSearchParams<{
     id: string;
     name: string;
-    imageUrl: string;
-    genre: string;
+    city: string;
   }>();
 
   const [isFavourite, setIsFavourite] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
+  const [venueAddress, setVenueAddress] = useState('');
+  const [venueImageUrl, setVenueImageUrl] = useState('');
+  const [venueLatitude, setVenueLatitude] = useState<number | null>(null);
+  const [venueLongitude, setVenueLongitude] = useState<number | null>(null);
 
-  // Check if artist is already favourited
   const checkFavourite = useCallback(async () => {
     if (!user || !params.id) return;
     const { data } = await supabase
-      .from('favourite_artists')
-      .select('artist_id')
+      .from('favourite_venues')
+      .select('venue_id')
       .eq('user_id', user.id)
-      .eq('artist_id', params.id)
+      .eq('venue_id', params.id)
       .maybeSingle();
     setIsFavourite(!!data);
   }, [user, params.id]);
 
-  // Fetch upcoming events for this artist
+  const fetchVenueDetails = useCallback(async () => {
+    if (!params.id) return;
+    const venue = await getVenue(params.id);
+    if (venue) {
+      setVenueAddress(venue.address);
+      setVenueImageUrl(venue.imageUrl);
+      setVenueLatitude(venue.latitude);
+      setVenueLongitude(venue.longitude);
+    }
+  }, [params.id]);
+
   const fetchUpcomingEvents = useCallback(async () => {
-    if (!params.name) return;
+    if (!params.id) return;
     setLoadingEvents(true);
     try {
-      const events: Event[] = await searchEvents(params.name);
+      const events = await getVenueEvents(params.id);
       setUpcomingEvents(events);
     } catch (e) {
-      console.error('Error fetching artist events:', e);
+      console.error('Error fetching venue events:', e);
     }
     setLoadingEvents(false);
-  }, [params.name]);
+  }, [params.id]);
 
   useEffect(() => {
     checkFavourite();
+    fetchVenueDetails();
     fetchUpcomingEvents();
-  }, [checkFavourite, fetchUpcomingEvents]);
+  }, [checkFavourite, fetchVenueDetails, fetchUpcomingEvents]);
 
   async function handleToggleFavourite() {
     if (!user || !params.id) return;
     setToggling(true);
 
     if (isFavourite) {
-      // Remove from favourites
       await supabase
-        .from('favourite_artists')
+        .from('favourite_venues')
         .delete()
         .eq('user_id', user.id)
-        .eq('artist_id', params.id);
+        .eq('venue_id', params.id);
       setIsFavourite(false);
     } else {
-      // Upsert artist first (cache)
-      await supabase.from('artists').upsert(
+      await supabase.from('venues').upsert(
         {
           id: params.id,
           name: params.name,
-          image_url: params.imageUrl || null,
-          genre: params.genre || null,
+          city: params.city || null,
+          address: venueAddress || null,
+          image_url: venueImageUrl || null,
+          latitude: venueLatitude,
+          longitude: venueLongitude,
         },
         { onConflict: 'id' }
       );
-      // Add to favourites
-      await supabase.from('favourite_artists').insert({
+      await supabase.from('favourite_venues').insert({
         user_id: user.id,
-        artist_id: params.id,
+        venue_id: params.id,
       });
       setIsFavourite(true);
     }
     setToggling(false);
+  }
+
+  function openInMaps() {
+    if (venueLatitude && venueLongitude) {
+      const url = `https://www.google.com/maps/search/?api=1&query=${venueLatitude},${venueLongitude}`;
+      Linking.openURL(url);
+    }
   }
 
   return (
@@ -99,13 +120,15 @@ export default function ArtistProfileScreen() {
       <ScrollView>
         {/* Header image */}
         <View style={styles.imageWrapper}>
-          {params.imageUrl ? (
-            <Image source={{ uri: params.imageUrl }} style={styles.headerImage} />
+          {venueImageUrl ? (
+            <Image source={{ uri: venueImageUrl }} style={styles.headerImage} />
           ) : (
-            <View style={[styles.headerImage, { backgroundColor: Colors.surface }]} />
+            <View style={[styles.headerImage, { backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center' }]}>
+              <Ionicons name="location" size={64} color={Colors.textMuted} />
+            </View>
           )}
           <View style={styles.imageOverlay} />
-          <Text style={styles.artistName}>{params.name}</Text>
+          <Text style={styles.venueName}>{params.name}</Text>
 
           {/* Back button */}
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -130,15 +153,27 @@ export default function ArtistProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Genre badge */}
-        {params.genre ? (
-          <View style={styles.genreRow}>
-            <View style={styles.genreBadge}>
-              <Ionicons name="musical-note" size={14} color={Colors.primary} />
-              <Text style={styles.genreText}>{params.genre}</Text>
+        {/* Venue info */}
+        <View style={styles.infoSection}>
+          {params.city ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={18} color={Colors.primary} />
+              <Text style={styles.infoText}>{params.city}</Text>
             </View>
-          </View>
-        ) : null}
+          ) : null}
+          {venueAddress ? (
+            <TouchableOpacity
+              style={styles.infoRow}
+              disabled={!venueLatitude || !venueLongitude}
+              onPress={openInMaps}
+            >
+              <Ionicons name="navigate-outline" size={18} color={Colors.primary} />
+              <Text style={[styles.infoText, venueLatitude && venueLongitude ? styles.linkText : undefined]}>
+                {venueAddress}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
 
 
         {/* Upcoming events */}
@@ -149,7 +184,7 @@ export default function ArtistProfileScreen() {
             <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing.xl }} />
           ) : upcomingEvents.length === 0 ? (
             <Text style={styles.emptyText}>
-              Geen aankomende events gevonden in België.
+              Geen aankomende events gevonden voor deze venue.
             </Text>
           ) : (
             upcomingEvents.map((event) => (
@@ -185,12 +220,12 @@ export default function ArtistProfileScreen() {
                     <Ionicons name="calendar-outline" size={13} color={Colors.textSecondary} />
                     <Text style={styles.eventDetailText}>{event.date}</Text>
                   </View>
-                  <View style={styles.eventDetailRow}>
-                    <Ionicons name="location-outline" size={13} color={Colors.textSecondary} />
-                    <Text style={styles.eventDetailText}>
-                      {event.venue}, {event.city}
-                    </Text>
-                  </View>
+                  {event.time ? (
+                    <View style={styles.eventDetailRow}>
+                      <Ionicons name="time-outline" size={13} color={Colors.textSecondary} />
+                      <Text style={styles.eventDetailText}>{event.time}</Text>
+                    </View>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             ))
@@ -218,7 +253,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  artistName: {
+  venueName: {
     position: 'absolute',
     bottom: Spacing.lg,
     left: Spacing.lg,
@@ -247,27 +282,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  genreRow: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
+  infoSection: {
+    padding: Spacing.lg,
+    gap: Spacing.md,
   },
-  genreBadge: {
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: Spacing.xs,
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.primary,
+    gap: Spacing.sm,
   },
-  genreText: {
+  infoText: {
+    color: Colors.text,
+    fontSize: FontSizes.md,
+  },
+  linkText: {
     color: Colors.primary,
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
+
   eventsSection: {
     padding: Spacing.lg,
     marginTop: Spacing.md,

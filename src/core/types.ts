@@ -11,7 +11,14 @@ export interface TicketmasterEvent {
   };
   images?: { url: string; width: number; height: number }[];
   _embedded?: {
-    venues?: { name: string; city?: { name: string } }[];
+    venues?: {
+      id: string;
+      name: string;
+      city?: { name: string };
+      address?: { line1: string };
+      location?: { longitude: string; latitude: string };
+      images?: { url: string; width: number; height: number }[];
+    }[];
   };
 }
 
@@ -28,6 +35,7 @@ export interface Event {
   date: string;
   time: string;
   venue: string;
+  venueId: string;
   city: string;
   imageUrl: string;
   url?: string;
@@ -39,6 +47,17 @@ export interface Artist {
   name: string;
   imageUrl: string;
   genre: string;
+}
+
+// Venue from Ticketmaster / Supabase
+export interface Venue {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  imageUrl: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 // User profile stored in Supabase
