@@ -25,6 +25,7 @@ interface ChatItem {
   image_url: string | null;
   last_message: string | null;
   last_message_sender: string | null;
+  last_message_sender_id: string | null;
   last_message_time: string | null;
   // Group-specific
   event_id?: string;
@@ -92,6 +93,7 @@ export default function ChatScreen() {
           image_url: g.events?.image_url ?? null,
           last_message: null,
           last_message_sender: null,
+          last_message_sender_id: null,
           last_message_time: null,
           event_id: g.event_id,
           event_name: g.events?.name ?? 'Onbekend concert',
@@ -110,17 +112,18 @@ export default function ChatScreen() {
       const groupIds = groupItems.map((g) => g.id);
       const { data: msgData } = await supabase
         .from('messages')
-        .select(`group_id, content, created_at, users ( first_name )`)
+        .select(`group_id, content, created_at, user_id, users ( first_name )`)
         .in('group_id', groupIds)
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
-      const lastMessages = new Map<string, { content: string; sender: string; time: string }>();
+      const lastMessages = new Map<string, { content: string; sender: string; sender_id: string; time: string }>();
       for (const msg of (msgData ?? []) as any[]) {
         if (!lastMessages.has(msg.group_id)) {
           lastMessages.set(msg.group_id, {
             content: msg.content,
             sender: msg.users?.first_name ?? '',
+            sender_id: msg.user_id,
             time: msg.created_at,
           });
         }
@@ -130,6 +133,7 @@ export default function ChatScreen() {
         if (last) {
           group.last_message = last.content;
           group.last_message_sender = last.sender;
+          group.last_message_sender_id = last.sender_id;
           group.last_message_time = last.time;
         }
       }
@@ -146,11 +150,11 @@ export default function ChatScreen() {
 
     if (pmData && pmData.length > 0) {
       // Group by conversation partner
-      const convos = new Map<string, { content: string; time: string }>();
+      const convos = new Map<string, { content: string; time: string; sender_id: string }>();
       for (const msg of pmData as any[]) {
         const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
         if (!convos.has(partnerId)) {
-          convos.set(partnerId, { content: msg.content, time: msg.created_at });
+          convos.set(partnerId, { content: msg.content, time: msg.created_at, sender_id: msg.sender_id });
         }
       }
 
@@ -169,7 +173,8 @@ export default function ChatScreen() {
           title: `${partner.first_name} ${partner.last_name}`,
           image_url: partner.avatar_url ?? null,
           last_message: lastMsg?.content ?? null,
-          last_message_sender: null,
+          last_message_sender: partner.first_name,
+          last_message_sender_id: lastMsg?.sender_id ?? null,
           last_message_time: lastMsg?.time ?? null,
           buddy_user_id: partner.id,
           buddy_first_name: partner.first_name,
@@ -276,8 +281,10 @@ export default function ChatScreen() {
           </View>
           {item.last_message ? (
             <Text style={styles.lastMessage} numberOfLines={1}>
-              {item.type === 'group' && item.last_message_sender ? (
-                <Text style={styles.lastMessageSender}>{item.last_message_sender}: </Text>
+              {item.last_message_sender ? (
+                <Text style={styles.lastMessageSender}>
+                  {item.last_message_sender_id === user?.id ? 'Jij' : item.last_message_sender}:{' '}
+                </Text>
               ) : null}
               {item.last_message}
             </Text>

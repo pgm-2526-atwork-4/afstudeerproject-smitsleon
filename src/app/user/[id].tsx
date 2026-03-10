@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -36,6 +37,7 @@ export default function UserProfileScreen() {
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [favouriteArtists, setFavouriteArtists] = useState<ArtistChip[]>([]);
+  const [showBuddyMenu, setShowBuddyMenu] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!id) return;
@@ -146,6 +148,39 @@ export default function UserProfileScreen() {
     setSending(false);
   }
 
+  function handleRemoveBuddy() {
+    if (!currentUser || !id) return;
+    setShowBuddyMenu(false);
+    Alert.alert(
+      'Buddy verwijderen',
+      `Weet je zeker dat je ${profile?.first_name} ${profile?.last_name} als buddy wilt verwijderen?`,
+      [
+        { text: 'Annuleren', style: 'cancel' },
+        {
+          text: 'Verwijderen',
+          style: 'destructive',
+          onPress: async () => {
+            setSending(true);
+            const uid1 = currentUser.id < id ? currentUser.id : id;
+            const uid2 = currentUser.id < id ? id : currentUser.id;
+            const { error } = await supabase.from('buddies').delete().eq('user_id_1', uid1).eq('user_id_2', uid2);
+            if (error) {
+              Alert.alert('Fout', 'Kon buddy niet verwijderen.');
+            } else {
+              await Promise.all([
+                supabase.from('buddy_requests').delete().eq('from_user_id', currentUser.id).eq('to_user_id', id),
+                supabase.from('buddy_requests').delete().eq('from_user_id', id).eq('to_user_id', currentUser.id),
+              ]);
+              setBuddyStatus('none');
+              setBuddyCount((c) => Math.max(0, c - 1));
+            }
+            setSending(false);
+          },
+        },
+      ]
+    );
+  }
+
   // --- Loading / Error states ---
   if (loading) return <LoadingScreen />;
   if (!profile) {
@@ -240,26 +275,21 @@ export default function UserProfileScreen() {
               </TouchableOpacity>
             )}
             {buddyStatus === 'buddies' && (
-              <View style={styles.actionGroup}>
-                <View style={styles.successBadge}>
+              <View style={styles.buddyActionRow}>
+                <TouchableOpacity
+                  style={styles.messageBtn}
+                  onPress={() => router.push({ pathname: '/private-chat', params: { userId: id, firstName: profile.first_name, lastName: profile.last_name, avatarUrl: profile.avatar_url ?? '' } })}
+                >
+                  <Ionicons name="chatbubble-outline" size={18} color={Colors.text} />
+                  <Text style={styles.messageBtnText}>Bericht sturen</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.successBadge}
+                  onPress={() => setShowBuddyMenu(true)}
+                >
                   <Ionicons name="checkmark" size={20} color={Colors.primary} />
                   <Text style={styles.successBadgeText}>Buddies</Text>
-                </View>
-                <View style={styles.messageRow}>
-                  <TouchableOpacity
-                    style={styles.messageBtn}
-                    onPress={() => router.push({ pathname: '/private-chat', params: { userId: id, firstName: profile.first_name, lastName: profile.last_name, avatarUrl: profile.avatar_url ?? '' } })}
-                  >
-                    <Ionicons name="chatbubble-outline" size={18} color={Colors.text} />
-                    <Text style={styles.messageBtnText}>Bericht sturen</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.iconBtn}
-                    onPress={() => router.push({ pathname: '/buddies', params: { userId: id } })}
-                  >
-                    <Ionicons name="people-outline" size={20} color={Colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -300,6 +330,19 @@ export default function UserProfileScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal visible={showBuddyMenu} transparent animationType="fade" onRequestClose={() => setShowBuddyMenu(false)}>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowBuddyMenu(false)}>
+          <View style={styles.menu}>
+            <TouchableOpacity style={styles.menuOption} onPress={handleRemoveBuddy} disabled={sending}>
+              {sending
+                ? <ActivityIndicator size="small" color={Colors.error} />
+                : <><Ionicons name="person-remove-outline" size={20} color={Colors.error} /><Text style={styles.dangerText}>Verwijder buddy</Text></>
+              }
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -344,6 +387,7 @@ const styles = StyleSheet.create({
   declineBtn: { backgroundColor: Colors.error },
   actionBtnText: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
   successBadge: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -355,7 +399,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   successBadgeText: { color: Colors.primary, fontSize: FontSizes.md, fontWeight: 'bold' },
-  messageRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' },
   messageBtn: {
     flex: 1,
     flexDirection: 'row',
@@ -367,12 +410,17 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
   },
   messageBtnText: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
-  iconBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.full,
+  buddyActionRow: { flexDirection: 'row', gap: Spacing.sm },
+
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  menu: {
     backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    minWidth: 200,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
+  menuOption: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.md, borderRadius: Radius.sm },
+  dangerText: { color: Colors.error, fontSize: FontSizes.md, fontWeight: '600' },
 });
