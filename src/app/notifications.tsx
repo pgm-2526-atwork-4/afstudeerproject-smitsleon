@@ -131,7 +131,7 @@ export default function NotificationsScreen() {
           <View style={styles.cardText}>
             <Text style={styles.cardName}>{item.first_name} {item.last_name}</Text>
             <Text style={isAccepted ? styles.acceptedMsg : styles.pendingMsg}>
-              {isAccepted ? 'Jullie zijn nu buddies 🎉' : 'Wil jouw buddy worden'}
+              {isAccepted ? 'Jullie zijn nu buddies' : 'Wil jouw buddy worden'}
             </Text>
             {!isAccepted && <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>}
           </View>
