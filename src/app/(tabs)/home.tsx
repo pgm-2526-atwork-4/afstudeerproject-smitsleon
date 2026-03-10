@@ -72,6 +72,7 @@ export default function HomeScreen() {
         id: event.id,
         name: event.name,
         date: event.date,
+        time: event.time,
         venue: event.venue,
         city: event.city,
         imageUrl: event.imageUrl,

@@ -43,10 +43,13 @@ export default function ConcertDetailScreen() {
   const [creating, setCreating] = useState(false);
 
   async function upsertEvent() {
+    const dateTimeStr = params.date && params.time
+      ? `${params.date}T${params.time}`
+      : params.date;
     await supabase.from('events').upsert({
       id: params.id,
       name: params.name,
-      date: params.date ? new Date(params.date).toISOString() : null,
+      date: dateTimeStr ? new Date(dateTimeStr).toISOString() : null,
       location_name: params.venue ? `${params.venue}, ${params.city}` : null,
       image_url: params.imageUrl || null,
     }, { onConflict: 'id' });
