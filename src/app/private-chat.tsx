@@ -166,7 +166,6 @@ export default function PrivateChatScreen() {
             <UserAvatar uri={avatarUrl || null} initials={initials} size={36} />
             <View>
               <Text style={styles.headerName} numberOfLines={1}>{firstName} {lastName}</Text>
-              <Text style={styles.headerSub}>Privé chat</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -208,7 +207,6 @@ const styles = StyleSheet.create({
   backBtn: { padding: Spacing.xs },
   headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   headerName: { color: Colors.text, fontSize: FontSizes.lg, fontWeight: 'bold' },
-  headerSub: { color: Colors.textMuted, fontSize: FontSizes.xs },
   list: { padding: Spacing.md, paddingBottom: Spacing.sm },
   msgRow: { flexDirection: 'row', marginBottom: 2 },
   msgRowOwn: { justifyContent: 'flex-end' },
