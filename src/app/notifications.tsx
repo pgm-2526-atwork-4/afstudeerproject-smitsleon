@@ -38,6 +38,10 @@ interface NotifItem {
   accepter_first_name?: string;
   accepter_last_name?: string;
   accepter_avatar_url?: string | null;
+  // Populated for group_joined notifications
+  joiner_first_name?: string;
+  joiner_last_name?: string;
+  joiner_avatar_url?: string | null;
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -100,24 +104,32 @@ export default function NotificationsScreen() {
       data: { request_id: row.id },
     }));
 
-    // Fetch user info for buddy_accepted notifications
-    const accepterUserMap: Record<string, { first_name: string; last_name: string; avatar_url: string | null }> = {};
-    const accepterIds = (notifsRes.data ?? [])
-      .filter((n: any) => n.type === 'buddy_accepted' && n.data?.accepter_user_id)
-      .map((n: any) => n.data.accepter_user_id as string);
-    if (accepterIds.length > 0) {
-      const { data: accepterUsers } = await supabase
+    // Fetch user info for buddy_accepted (accepter) and group_joined (joiner) notifications
+    const userInfoMap: Record<string, { first_name: string; last_name: string; avatar_url: string | null }> = {};
+    const extraUserIds = Array.from(new Set([
+      ...(notifsRes.data ?? [])
+        .filter((n: any) => n.type === 'buddy_accepted' && n.data?.accepter_user_id)
+        .map((n: any) => n.data.accepter_user_id as string),
+      ...(notifsRes.data ?? [])
+        .filter((n: any) => n.type === 'group_joined' && n.data?.joiner_user_id)
+        .map((n: any) => n.data.joiner_user_id as string),
+    ]));
+    if (extraUserIds.length > 0) {
+      const { data: extraUsers } = await supabase
         .from('users')
         .select('id, first_name, last_name, avatar_url')
-        .in('id', accepterIds);
-      for (const u of (accepterUsers ?? []) as any[]) {
-        accepterUserMap[u.id] = { first_name: u.first_name, last_name: u.last_name, avatar_url: u.avatar_url ?? null };
+        .in('id', extraUserIds);
+      for (const u of (extraUsers ?? []) as any[]) {
+        userInfoMap[u.id] = { first_name: u.first_name, last_name: u.last_name, avatar_url: u.avatar_url ?? null };
       }
     }
 
     const notifItems: NotifItem[] = (notifsRes.data ?? []).map((row: any) => {
       const accepter = row.type === 'buddy_accepted' && row.data?.accepter_user_id
-        ? accepterUserMap[row.data.accepter_user_id]
+        ? userInfoMap[row.data.accepter_user_id]
+        : undefined;
+      const joiner = row.type === 'group_joined' && row.data?.joiner_user_id
+        ? userInfoMap[row.data.joiner_user_id]
         : undefined;
       return {
         id: `n-${row.id}`,
@@ -131,6 +143,9 @@ export default function NotificationsScreen() {
         accepter_first_name: accepter?.first_name,
         accepter_last_name: accepter?.last_name,
         accepter_avatar_url: accepter?.avatar_url ?? null,
+        joiner_first_name: joiner?.first_name,
+        joiner_last_name: joiner?.last_name,
+        joiner_avatar_url: joiner?.avatar_url ?? null,
       };
     });
 
@@ -307,11 +322,15 @@ export default function NotificationsScreen() {
         >
           {isUnread && <View style={styles.unreadDot} />}
           <View style={styles.cardInfo}>
-            <View style={styles.notifIconWrapper}>
-              <Ionicons name="person-add" size={24} color={Colors.primary} />
-            </View>
+            <UserAvatar
+              uri={item.joiner_avatar_url ?? null}
+              initials={`${(item.joiner_first_name ?? '')[0] ?? ''}${(item.joiner_last_name ?? '')[0] ?? ''}`.toUpperCase()}
+              size={48}
+            />
             <View style={styles.cardText}>
-              <Text style={styles.cardName}>{item.title}</Text>
+              <Text style={styles.cardName}>
+                {item.joiner_first_name} {item.joiner_last_name}
+              </Text>
               <Text style={styles.neutralMsg}>{item.body}</Text>
               <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
             </View>

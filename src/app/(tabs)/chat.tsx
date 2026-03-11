@@ -49,6 +49,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const [chatItems, setChatItems] = useState<ChatItem[]>([]);
   const [readTimes, setReadTimes] = useState<Record<string, number>>({});
+  const [filter, setFilter] = useState<'all' | 'group' | 'private'>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -300,7 +301,7 @@ export default function ChatScreen() {
             <Text style={styles.chatTitle} numberOfLines={1}>{item.title}</Text>
           </View>
           {(() => {
-            const isUnread = item.last_message_time
+            const isUnread = item.last_message_time && item.last_message_sender_id !== user?.id
               ? new Date(item.last_message_time).getTime() > (readTimes[item.id] ?? 0)
               : false;
             return item.last_message ? (
@@ -336,6 +337,26 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Berichten</Text>
+        <View style={styles.filterRow}>
+          <TouchableOpacity
+            style={[styles.filterBtn, filter === 'all' && styles.filterBtnActive]}
+            onPress={() => setFilter('all')}
+          >
+            <Text style={[styles.filterBtnText, filter === 'all' && styles.filterBtnTextActive]}>Alle</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterBtn, filter === 'group' && styles.filterBtnActive]}
+            onPress={() => setFilter('group')}
+          >
+            <Text style={[styles.filterBtnText, filter === 'group' && styles.filterBtnTextActive]}>Groepen</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterBtn, filter === 'private' && styles.filterBtnActive]}
+            onPress={() => setFilter('private')}
+          >
+            <Text style={[styles.filterBtnText, filter === 'private' && styles.filterBtnTextActive]}>Privé</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
@@ -344,7 +365,7 @@ export default function ChatScreen() {
         </View>
       ) : (
         <FlatList
-          data={chatItems}
+          data={filter === 'all' ? chatItems : chatItems.filter((c) => c.type === filter)}
           keyExtractor={(item) => item.id}
           renderItem={renderChatItem}
           contentContainerStyle={chatItems.length === 0 ? { flex: 1 } : styles.list}
@@ -377,8 +398,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.sm,
+    gap: Spacing.sm,
   },
   title: { color: Colors.text, fontSize: FontSizes.xxl, fontWeight: 'bold' },
+  filterRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  filterBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 5,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  filterBtnActive: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(29, 185, 84, 0.12)',
+  },
+  filterBtnText: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+  },
+  filterBtnTextActive: {
+    color: Colors.primary,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl, gap: Spacing.md },
   emptyTitle: { color: Colors.textSecondary, fontSize: FontSizes.lg, fontWeight: '600', textAlign: 'center' },
   emptySubtitle: { color: Colors.textMuted, fontSize: FontSizes.sm, textAlign: 'center', lineHeight: 20 },

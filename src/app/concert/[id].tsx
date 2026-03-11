@@ -40,7 +40,9 @@ export default function ConcertDetailScreen() {
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
   const [groupTitle, setGroupTitle] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
-  const [groupMaxMembers, setGroupMaxMembers] = useState('6');
+  const [groupMaxMembers, setGroupMaxMembers] = useState(6);
+  const MIN_MEMBERS = 2;
+  const MAX_MEMBERS = 50;
   const [creating, setCreating] = useState(false);
   const [concertStatus, setConcertStatus] = useState<'interested' | 'going' | null>(null);
 
@@ -136,8 +138,8 @@ export default function ConcertDetailScreen() {
   async function handleCreateGroup() {
     if (!user) { Alert.alert('Niet ingelogd', 'Log in om een groep aan te maken.'); return; }
     if (!groupTitle.trim()) { Alert.alert('Verplicht veld', 'Geef je groep een naam.'); return; }
-    const maxMembers = parseInt(groupMaxMembers, 10);
-    if (isNaN(maxMembers) || maxMembers < 2 || maxMembers > 50) {
+    const maxMembers = groupMaxMembers;
+    if (maxMembers < 2) {
       Alert.alert('Ongeldig getal', 'Maximum leden moet tussen 2 en 50 liggen.');
       return;
     }
@@ -151,7 +153,7 @@ export default function ConcertDetailScreen() {
         .single();
       if (groupError || !group) { Alert.alert('Fout', 'Groep aanmaken mislukt. Probeer opnieuw.'); setCreating(false); return; }
       await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id });
-      setGroupTitle(''); setGroupDescription(''); setGroupMaxMembers('6');
+      setGroupTitle(''); setGroupDescription(''); setGroupMaxMembers(6);
       setModalVisible(false);
       await fetchGroups();
     } catch { Alert.alert('Fout', 'Er is een onverwachte fout opgetreden.'); }
@@ -372,7 +374,23 @@ export default function ConcertDetailScreen() {
             <Text style={styles.inputLabel}>Beschrijving</Text>
             <TextInput style={[styles.input, styles.inputMultiline]} value={groupDescription} onChangeText={setGroupDescription} placeholder="Vertel iets over jullie groep..." placeholderTextColor={Colors.textMuted} multiline numberOfLines={3} maxLength={200} />
             <Text style={styles.inputLabel}>Maximum aantal leden</Text>
-            <TextInput style={styles.input} value={groupMaxMembers} onChangeText={setGroupMaxMembers} keyboardType="number-pad" placeholder="6" placeholderTextColor={Colors.textMuted} maxLength={2} />
+            <View style={styles.counterRow}>
+              <TouchableOpacity
+                style={[styles.counterBtn, groupMaxMembers <= MIN_MEMBERS && styles.counterBtnDisabled]}
+                onPress={() => setGroupMaxMembers((v) => Math.max(MIN_MEMBERS, v - 1))}
+                disabled={groupMaxMembers <= MIN_MEMBERS}
+              >
+                <Ionicons name="remove" size={20} color={groupMaxMembers <= MIN_MEMBERS ? Colors.textMuted : Colors.text} />
+              </TouchableOpacity>
+              <Text style={styles.counterValue}>{groupMaxMembers}</Text>
+              <TouchableOpacity
+                style={[styles.counterBtn, groupMaxMembers >= MAX_MEMBERS && styles.counterBtnDisabled]}
+                onPress={() => setGroupMaxMembers((v) => Math.min(MAX_MEMBERS, v + 1))}
+                disabled={groupMaxMembers >= MAX_MEMBERS}
+              >
+                <Ionicons name="add" size={20} color={groupMaxMembers >= MAX_MEMBERS ? Colors.textMuted : Colors.text} />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity style={[styles.createButton, creating && styles.createButtonDisabled]} onPress={handleCreateGroup} disabled={creating}>
               {creating ? <ActivityIndicator color={Colors.text} /> : <Text style={styles.createButtonText}>Groep aanmaken</Text>}
             </TouchableOpacity>
@@ -591,5 +609,33 @@ const styles = StyleSheet.create({
   },
   statusBtnTextActive: {
     color: Colors.primary,
+  },
+
+  // Max members counter
+  counterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  counterBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  counterBtnDisabled: {
+    opacity: 0.4,
+  },
+  counterValue: {
+    color: Colors.text,
+    fontSize: FontSizes.xl,
+    fontWeight: 'bold',
+    minWidth: 32,
+    textAlign: 'center',
   },
 });
