@@ -19,14 +19,25 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface BuddyRequest {
+// Unified notification item
+interface NotifItem {
   id: string;
-  from_user_id: string;
-  first_name: string;
-  last_name: string;
-  avatar_url: string | null;
+  itemType: 'buddy_request' | 'notification';
+  from_user_id?: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string | null;
+  type?: string;
+  title?: string;
+  body?: string;
+  data?: any;
+  read: boolean;
   created_at: string;
   localStatus?: 'pending' | 'accepted';
+  // Populated for buddy_accepted notifications
+  accepter_first_name?: string;
+  accepter_last_name?: string;
+  accepter_avatar_url?: string | null;
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -42,125 +53,288 @@ function formatTimeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
 }
 
+function typeIcon(type: string): { name: keyof typeof Ionicons.glyphMap; color: string } {
+  switch (type) {
+    case 'buddy_accepted': return { name: 'people', color: Colors.primary };
+    case 'group_joined': return { name: 'person-add', color: Colors.primary };
+    default: return { name: 'notifications', color: Colors.textSecondary };
+  }
+}
+
 export default function NotificationsScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [requests, setRequests] = useState<BuddyRequest[]>([]);
+  const [items, setItems] = useState<NotifItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const fetchRequests = useCallback(async (isRefresh = false) => {
+  const fetchAll = useCallback(async (isRefresh = false) => {
     if (!user) { setLoading(false); return; }
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+    if (isRefresh) setRefreshing(true); else setLoading(true);
 
-    const { data, error } = await supabase
-      .from('buddy_requests')
-      .select(`
-        id,
-        from_user_id,
-        status,
-        created_at,
-        users!buddy_requests_from_user_id_fkey (
-          first_name,
-          last_name,
-          avatar_url
-        )
-      `)
-      .eq('to_user_id', user.id)
-      .in('status', ['pending', 'accepted'])
-      .order('created_at', { ascending: false });
+    const [requestsRes, notifsRes] = await Promise.all([
+      supabase
+        .from('buddy_requests')
+        .select(`id, from_user_id, status, created_at, users!buddy_requests_from_user_id_fkey(first_name, last_name, avatar_url)`)
+        .eq('to_user_id', user.id)
+        .in('status', ['pending', 'accepted'])
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+    ]);
 
-    if (!error) {
-      setRequests(
-        (data ?? []).map((row: any) => ({
-          id: row.id,
-          from_user_id: row.from_user_id,
-          first_name: row.users?.first_name ?? '',
-          last_name: row.users?.last_name ?? '',
-          avatar_url: row.users?.avatar_url ?? null,
-          created_at: row.created_at,
-          localStatus: row.status === 'accepted' ? ('accepted' as const) : undefined,
-        }))
+    const buddyItems: NotifItem[] = (requestsRes.data ?? []).map((row: any) => ({
+      id: `br-${row.id}`,
+      itemType: 'buddy_request',
+      from_user_id: row.from_user_id,
+      first_name: row.users?.first_name ?? '',
+      last_name: row.users?.last_name ?? '',
+      avatar_url: row.users?.avatar_url ?? null,
+      read: row.status === 'accepted',
+      created_at: row.created_at,
+      localStatus: row.status === 'accepted' ? 'accepted' : undefined,
+      data: { request_id: row.id },
+    }));
+
+    // Fetch user info for buddy_accepted notifications
+    const accepterUserMap: Record<string, { first_name: string; last_name: string; avatar_url: string | null }> = {};
+    const accepterIds = (notifsRes.data ?? [])
+      .filter((n: any) => n.type === 'buddy_accepted' && n.data?.accepter_user_id)
+      .map((n: any) => n.data.accepter_user_id as string);
+    if (accepterIds.length > 0) {
+      const { data: accepterUsers } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, avatar_url')
+        .in('id', accepterIds);
+      for (const u of (accepterUsers ?? []) as any[]) {
+        accepterUserMap[u.id] = { first_name: u.first_name, last_name: u.last_name, avatar_url: u.avatar_url ?? null };
+      }
+    }
+
+    const notifItems: NotifItem[] = (notifsRes.data ?? []).map((row: any) => {
+      const accepter = row.type === 'buddy_accepted' && row.data?.accepter_user_id
+        ? accepterUserMap[row.data.accepter_user_id]
+        : undefined;
+      return {
+        id: `n-${row.id}`,
+        itemType: 'notification',
+        type: row.type,
+        title: row.title,
+        body: row.body,
+        data: row.data,
+        read: row.read,
+        created_at: row.created_at,
+        accepter_first_name: accepter?.first_name,
+        accepter_last_name: accepter?.last_name,
+        accepter_avatar_url: accepter?.avatar_url ?? null,
+      };
+    });
+
+    // Merge and sort newest-first
+    const merged = [...buddyItems, ...notifItems].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    setItems(merged);
+
+    // Mark all unread notifications as read in DB, then mirror in local state
+    const unreadIds = (notifsRes.data ?? [])
+      .filter((n: any) => !n.read)
+      .map((n: any) => n.id);
+    if (unreadIds.length > 0) {
+      await supabase.from('notifications').update({ read: true }).in('id', unreadIds);
+      setItems((prev) =>
+        prev.map((i) => i.itemType === 'notification' ? { ...i, read: true } : i)
       );
     }
+
     setLoading(false);
     setRefreshing(false);
   }, [user]);
 
-  useFocusEffect(useCallback(() => { fetchRequests(); }, [fetchRequests]));
+  useFocusEffect(useCallback(() => { fetchAll(); }, [fetchAll]));
 
-  async function handleAccept(requestId: string) {
-    setProcessingId(requestId);
+  async function handleAccept(item: NotifItem) {
+    const requestId = item.data?.request_id;
+    if (!requestId) return;
+    setProcessingId(item.id);
     const { error } = await supabase.rpc('accept_buddy_request', { request_id: requestId });
     if (error) {
       Alert.alert('Fout', 'Kon verzoek niet accepteren. Probeer opnieuw.');
     } else {
-      setRequests((prev) =>
-        prev.map((r) => r.id === requestId ? { ...r, localStatus: 'accepted' as const } : r)
+      setItems((prev) =>
+        prev.map((i) => i.id === item.id ? { ...i, localStatus: 'accepted', read: true } : i)
       );
+      // Notify the requester
+      await supabase.from('notifications').insert({
+        user_id: item.from_user_id,
+        type: 'buddy_accepted',
+        title: 'Buddy verzoek geaccepteerd',
+        body: 'Je buddy verzoek is geaccepteerd! Jullie zijn nu buddies.',
+        data: { accepter_user_id: user?.id },
+      });
     }
     setProcessingId(null);
   }
 
-  async function handleDecline(requestId: string) {
-    setProcessingId(requestId);
+  async function handleDecline(item: NotifItem) {
+    const requestId = item.data?.request_id;
+    if (!requestId) return;
+    setProcessingId(item.id);
     const { error } = await supabase.rpc('decline_buddy_request', { request_id: requestId });
     if (error) {
       Alert.alert('Fout', 'Kon verzoek niet weigeren. Probeer opnieuw.');
     } else {
-      setRequests((prev) => prev.filter((r) => r.id !== requestId));
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
     }
     setProcessingId(null);
   }
 
-  function renderRequest({ item }: { item: BuddyRequest }) {
-    const initials = `${item.first_name[0] ?? ''}${item.last_name[0] ?? ''}`.toUpperCase();
+  function renderItem({ item }: { item: NotifItem }) {
     const isProcessing = processingId === item.id;
-    const isAccepted = item.localStatus === 'accepted';
+    const isUnread = !item.read;
 
-    return (
-      <View style={styles.card}>
+    if (item.itemType === 'buddy_request') {
+      const initials = `${(item.first_name ?? '')[0] ?? ''}${(item.last_name ?? '')[0] ?? ''}`.toUpperCase();
+      const isAccepted = item.localStatus === 'accepted';
+
+      return (
+        <View style={styles.card}>
+          {isUnread && <View style={styles.unreadDot} />}
+          <TouchableOpacity
+            style={styles.cardInfo}
+            activeOpacity={0.7}
+            onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.from_user_id! } })}
+          >
+            <UserAvatar uri={item.avatar_url ?? null} initials={initials} size={48} />
+            <View style={styles.cardText}>
+              <Text style={styles.cardName}>{item.first_name} {item.last_name}</Text>
+              <Text style={isAccepted ? styles.positiveMsg : styles.neutralMsg}>
+                {isAccepted ? 'Jullie zijn nu buddies 🎉' : 'Wil jouw buddy worden'}
+              </Text>
+              <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
+            </View>
+          </TouchableOpacity>
+
+          {!isAccepted && (
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.acceptBtn]}
+                onPress={() => handleAccept(item)}
+                disabled={isProcessing}
+              >
+                {isProcessing
+                  ? <ActivityIndicator size="small" color={Colors.text} />
+                  : <Ionicons name="checkmark" size={22} color={Colors.text} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.declineBtn]}
+                onPress={() => handleDecline(item)}
+                disabled={isProcessing}
+              >
+                {isProcessing
+                  ? <ActivityIndicator size="small" color={Colors.text} />
+                  : <Ionicons name="close" size={22} color={Colors.text} />}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {isAccepted && <Ionicons name="checkmark-circle" size={28} color={Colors.primary} />}
+        </View>
+      );
+    }
+
+    // App notification — buddy_accepted
+    if (item.type === 'buddy_accepted') {
+      const accepterId = item.data?.accepter_user_id;
+      const initials = `${(item.accepter_first_name ?? '')[0] ?? ''}${(item.accepter_last_name ?? '')[0] ?? ''}`.toUpperCase();
+      return (
         <TouchableOpacity
-          style={styles.cardInfo}
+          style={styles.card}
           activeOpacity={0.7}
-          onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.from_user_id } })}
+          onPress={() => accepterId && router.push({ pathname: '/user/[id]', params: { id: accepterId } })}
         >
-          <UserAvatar uri={item.avatar_url} initials={initials} size={48} />
-          <View style={styles.cardText}>
-            <Text style={styles.cardName}>{item.first_name} {item.last_name}</Text>
-            <Text style={isAccepted ? styles.acceptedMsg : styles.pendingMsg}>
-              {isAccepted ? 'Jullie zijn nu buddies' : 'Wil jouw buddy worden'}
-            </Text>
-            {!isAccepted && <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>}
+          {isUnread && <View style={styles.unreadDot} />}
+          <View style={styles.cardInfo}>
+            <UserAvatar uri={item.accepter_avatar_url ?? null} initials={initials} size={48} />
+            <View style={styles.cardText}>
+              <Text style={styles.cardName}>
+                {item.accepter_first_name} {item.accepter_last_name}
+              </Text>
+              <Text style={styles.positiveMsg}>heeft je buddy verzoek geaccepteerd 🎉</Text>
+              <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
+            </View>
           </View>
         </TouchableOpacity>
+      );
+    }
 
-        {!isAccepted && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.acceptBtn]}
-              onPress={() => handleAccept(item.id)}
-              disabled={isProcessing}
-            >
-              {isProcessing
-                ? <ActivityIndicator size="small" color={Colors.text} />
-                : <Ionicons name="checkmark" size={22} color={Colors.text} />}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.declineBtn]}
-              onPress={() => handleDecline(item.id)}
-              disabled={isProcessing}
-            >
-              {isProcessing
-                ? <ActivityIndicator size="small" color={Colors.text} />
-                : <Ionicons name="close" size={22} color={Colors.text} />}
-            </TouchableOpacity>
+    // App notification — group_joined
+    if (item.type === 'group_joined') {
+      const groupId = item.data?.group_id;
+      return (
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.7}
+          onPress={async () => {
+            if (!groupId) return;
+            const { data: g } = await supabase
+              .from('groups')
+              .select(`id, title, description, max_members, created_by, event_id, events(name, image_url, date, location_name)`)
+              .eq('id', groupId)
+              .single();
+            if (g) {
+              router.push({
+                pathname: '/group/[id]',
+                params: {
+                  id: g.id,
+                  title: g.title,
+                  description: g.description ?? '',
+                  max_members: String(g.max_members ?? 6),
+                  created_by: g.created_by ?? '',
+                  event_id: g.event_id ?? '',
+                  event_name: (g as any).events?.name ?? '',
+                  event_image_url: (g as any).events?.image_url ?? '',
+                  event_date: (g as any).events?.date ?? '',
+                  event_location: (g as any).events?.location_name ?? '',
+                },
+              });
+            }
+          }}
+        >
+          {isUnread && <View style={styles.unreadDot} />}
+          <View style={styles.cardInfo}>
+            <View style={styles.notifIconWrapper}>
+              <Ionicons name="person-add" size={24} color={Colors.primary} />
+            </View>
+            <View style={styles.cardText}>
+              <Text style={styles.cardName}>{item.title}</Text>
+              <Text style={styles.neutralMsg}>{item.body}</Text>
+              <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
+            </View>
           </View>
-        )}
+        </TouchableOpacity>
+      );
+    }
 
-        {isAccepted && <Ionicons name="checkmark-circle" size={28} color={Colors.primary} />}
+    // Generic fallback
+    const icon = typeIcon(item.type ?? '');
+    return (
+      <View style={styles.card}>
+        {isUnread && <View style={styles.unreadDot} />}
+        <View style={styles.cardInfo}>
+          <View style={styles.notifIconWrapper}>
+            <Ionicons name={icon.name} size={24} color={icon.color} />
+          </View>
+          <View style={styles.cardText}>
+            <Text style={styles.cardName}>{item.title}</Text>
+            <Text style={styles.neutralMsg}>{item.body}</Text>
+            <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
+          </View>
+        </View>
       </View>
     );
   }
@@ -168,7 +342,7 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn2}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Meldingen</Text>
@@ -178,14 +352,14 @@ export default function NotificationsScreen() {
         <LoadingScreen />
       ) : (
         <FlatList
-          data={requests}
+          data={items}
           keyExtractor={(item) => item.id}
-          renderItem={renderRequest}
-          contentContainerStyle={requests.length === 0 ? { flex: 1 } : styles.list}
+          renderItem={renderItem}
+          contentContainerStyle={items.length === 0 ? { flex: 1 } : styles.list}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => fetchRequests(true)}
+              onRefresh={() => fetchAll(true)}
               tintColor={Colors.primary}
               colors={[Colors.primary]}
             />
@@ -211,7 +385,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backBtn2: { padding: Spacing.xs },
+  backBtn: { padding: Spacing.xs },
   title: { color: Colors.text, fontSize: FontSizes.xl, fontWeight: 'bold', flex: 1 },
   list: { padding: Spacing.lg, gap: Spacing.md },
   card: {
@@ -223,12 +397,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     gap: Spacing.md,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  unreadDot: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.primary,
   },
   cardInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   cardText: { flex: 1 },
   cardName: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold', marginBottom: 2 },
-  pendingMsg: { color: Colors.textSecondary, fontSize: FontSizes.sm },
-  acceptedMsg: { color: Colors.primary, fontSize: FontSizes.sm, fontWeight: '600' },
+  neutralMsg: { color: Colors.textSecondary, fontSize: FontSizes.sm },
+  positiveMsg: { color: Colors.primary, fontSize: FontSizes.sm, fontWeight: '600' },
   timeText: { color: Colors.textMuted, fontSize: FontSizes.xs, marginTop: 2 },
   actions: { flexDirection: 'row', gap: Spacing.sm },
   actionBtn: {
@@ -240,4 +425,12 @@ const styles = StyleSheet.create({
   },
   acceptBtn: { backgroundColor: Colors.primary },
   declineBtn: { backgroundColor: Colors.error },
+  notifIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

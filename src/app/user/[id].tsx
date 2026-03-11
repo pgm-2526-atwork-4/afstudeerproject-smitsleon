@@ -158,7 +158,18 @@ export default function UserProfileScreen() {
     setSending(true);
     const { error } = await supabase.rpc('accept_buddy_request', { request_id: pendingRequestId });
     if (error) Alert.alert('Fout', 'Kon verzoek niet accepteren.');
-    else { setBuddyStatus('buddies'); setBuddyCount((c) => c + 1); }
+    else {
+      setBuddyStatus('buddies');
+      setBuddyCount((c) => c + 1);
+      // Notify the requester (id) that their request was accepted
+      await supabase.from('notifications').insert({
+        user_id: id,
+        type: 'buddy_accepted',
+        title: 'Buddy verzoek geaccepteerd',
+        body: 'Je buddy verzoek is geaccepteerd! Jullie zijn nu buddies.',
+        data: { accepter_user_id: currentUser?.id },
+      });
+    }
     setSending(false);
   }
 
@@ -357,7 +368,7 @@ export default function UserProfileScreen() {
           ) : (
             <ArtistChipsGrid
               artists={favouriteArtists}
-              maxVisible={5}
+              maxVisible={3}
               onArtistPress={(artist) =>
                 router.push({
                   pathname: '/artist/[id]',
@@ -377,7 +388,7 @@ export default function UserProfileScreen() {
           ) : (
             <VenueChipsGrid
               venues={favouriteVenues}
-              maxVisible={5}
+              maxVisible={3}
               onVenuePress={(venue) =>
                 router.push({
                   pathname: '/venue/[id]',

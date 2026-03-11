@@ -10,16 +10,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -36,12 +36,19 @@ export default function HomeScreen() {
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
-    const { count } = await supabase
-      .from('buddy_requests')
-      .select('*', { count: 'exact', head: true })
-      .eq('to_user_id', user.id)
-      .eq('status', 'pending');
-    setUnreadCount(count ?? 0);
+    const [buddyRes, notifRes] = await Promise.all([
+      supabase
+        .from('buddy_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('to_user_id', user.id)
+        .eq('status', 'pending'),
+      supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false),
+    ]);
+    setUnreadCount((buddyRes.count ?? 0) + (notifRes.count ?? 0));
   }, [user]);
 
   useFocusEffect(
@@ -309,7 +316,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    backgroundColor: Colors.error,
+    backgroundColor: Colors.primary,
     borderRadius: Radius.full,
     minWidth: 18,
     height: 18,

@@ -3,17 +3,18 @@ import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -47,6 +48,7 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const [chatItems, setChatItems] = useState<ChatItem[]>([]);
+  const [readTimes, setReadTimes] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -196,7 +198,23 @@ export default function ChatScreen() {
     setRefreshing(false);
   }, [user]);
 
-  useFocusEffect(useCallback(() => { fetchChats(); }, [fetchChats]));
+  useFocusEffect(useCallback(() => {
+    fetchChats().then(async () => {
+      // Load AsyncStorage read timestamps after chats are fetched
+      setChatItems((prev) => {
+        const keys = prev.map((c) => `chat_read:${c.id}`);
+        AsyncStorage.multiGet(keys).then((stored) => {
+          const times: Record<string, number> = {};
+          for (const [key, val] of stored) {
+            const id = key.replace('chat_read:', '');
+            times[id] = val ? parseInt(val, 10) : 0;
+          }
+          setReadTimes(times);
+        });
+        return prev;
+      });
+    });
+  }, [fetchChats]));
 
   function formatMessageTime(dateStr: string) {
     const d = new Date(dateStr);
@@ -213,7 +231,9 @@ export default function ChatScreen() {
     return d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
   }
 
-  function handlePress(item: ChatItem) {
+  async function handlePress(item: ChatItem) {
+    await AsyncStorage.setItem(`chat_read:${item.id}`, String(Date.now()));
+    setReadTimes((prev) => ({ ...prev, [item.id]: Date.now() }));
     if (item.type === 'group') {
       router.push({
         pathname: '/group/chat',
@@ -279,18 +299,26 @@ export default function ChatScreen() {
             />
             <Text style={styles.chatTitle} numberOfLines={1}>{item.title}</Text>
           </View>
-          {item.last_message ? (
-            <Text style={styles.lastMessage} numberOfLines={1}>
-              {item.last_message_sender ? (
-                <Text style={styles.lastMessageSender}>
-                  {item.last_message_sender_id === user?.id ? 'Jij' : item.last_message_sender}:{' '}
-                </Text>
-              ) : null}
-              {item.last_message}
-            </Text>
-          ) : (
-            <Text style={styles.lastMessage} numberOfLines={1}>Nog geen berichten</Text>
-          )}
+          {(() => {
+            const isUnread = item.last_message_time
+              ? new Date(item.last_message_time).getTime() > (readTimes[item.id] ?? 0)
+              : false;
+            return item.last_message ? (
+              <Text
+                style={[styles.lastMessage, isUnread && styles.lastMessageUnread]}
+                numberOfLines={1}
+              >
+                {item.last_message_sender ? (
+                  <Text style={[styles.lastMessageSender, isUnread && styles.lastMessageUnread]}>
+                    {item.last_message_sender_id === user?.id ? 'Jij' : item.last_message_sender}:{' '}
+                  </Text>
+                ) : null}
+                {item.last_message}
+              </Text>
+            ) : (
+              <Text style={styles.lastMessage} numberOfLines={1}>Nog geen berichten</Text>
+            );
+          })()}
         </View>
 
         {/* Time + chevron */}
@@ -391,6 +419,7 @@ const styles = StyleSheet.create({
   },
   chatTitle: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold', flex: 1 },
   lastMessage: { color: Colors.textMuted, fontSize: FontSizes.sm },
+  lastMessageUnread: { color: Colors.text, fontWeight: 'bold' },
   lastMessageSender: { color: Colors.textSecondary, fontWeight: '600' },
   cardRight: {
     alignItems: 'flex-end',

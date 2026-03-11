@@ -165,8 +165,30 @@ export default function ConcertDetailScreen() {
     if (memberCount >= group.max_members) { Alert.alert('Groep vol', 'Deze groep heeft het maximale aantal leden bereikt.'); return; }
     setJoiningGroupId(group.id);
     const { error } = await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id });
-    if (error) Alert.alert('Fout', 'Deelnemen mislukt. Probeer opnieuw.');
-    else await fetchGroups();
+    if (error) {
+      Alert.alert('Fout', 'Deelnemen mislukt. Probeer opnieuw.');
+    } else {
+      // Notify all other group members
+      const [membersRes, joinerRes] = await Promise.all([
+        supabase.from('group_members').select('user_id').eq('group_id', group.id).neq('user_id', user.id),
+        supabase.from('users').select('first_name, last_name').eq('id', user.id).single(),
+      ]);
+      if (membersRes.data && membersRes.data.length > 0) {
+        const joinerName = joinerRes.data
+          ? `${joinerRes.data.first_name} ${joinerRes.data.last_name}`
+          : 'Iemand';
+        await supabase.from('notifications').insert(
+          membersRes.data.map((m: any) => ({
+            user_id: m.user_id,
+            type: 'group_joined',
+            title: group.title,
+            body: `${joinerName} heeft zich aangesloten bij de groep "${group.title}"`,
+            data: { group_id: group.id, joiner_user_id: user.id, event_id: params.id, event_name: params.name },
+          }))
+        );
+      }
+      await fetchGroups();
+    }
     setJoiningGroupId(null);
   }
 

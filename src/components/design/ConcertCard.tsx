@@ -22,7 +22,7 @@ export function ConcertCard({ name, date, venue, imageUrl, groupCount = 0, fill,
   const shortDate = (() => {
     try {
       const d = new Date(date);
-      return d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
+      return d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short', year: 'numeric' });
     } catch {
       return date;
     }

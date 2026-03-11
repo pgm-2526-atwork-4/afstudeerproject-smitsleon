@@ -147,7 +147,7 @@ export default function ProfileScreen() {
           ) : (
             <ArtistChipsGrid
               artists={favouriteArtists}
-              maxVisible={5}
+              maxVisible={3}
               onArtistPress={(artist) =>
                 router.push({
                   pathname: '/artist/[id]',
@@ -167,7 +167,7 @@ export default function ProfileScreen() {
           ) : (
             <VenueChipsGrid
               venues={favouriteVenues}
-              maxVisible={5}
+              maxVisible={3}
               onVenuePress={(venue) =>
                 router.push({
                   pathname: '/venue/[id]',
