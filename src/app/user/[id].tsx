@@ -34,6 +34,8 @@ export default function UserProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [buddyCount, setBuddyCount] = useState(0);
+  const [interestedCount, setInterestedCount] = useState(0);
+  const [goingCount, setGoingCount] = useState(0);
   const [buddyStatus, setBuddyStatus] = useState<BuddyStatus>('none');
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -45,7 +47,7 @@ export default function UserProfileScreen() {
     if (!id) return;
     setLoading(true);
 
-    const [profileRes, buddyCountRes, favRes, venueRes] = await Promise.all([
+    const [profileRes, buddyCountRes, favRes, venueRes, interestedRes, goingRes] = await Promise.all([
       supabase.from('users').select('*').eq('id', id).single(),
       supabase.rpc('count_buddies', { user_id: id }),
       supabase
@@ -58,10 +60,22 @@ export default function UserProfileScreen() {
         .select('venue_id, venues(id, name, city, image_url)')
         .eq('user_id', id)
         .order('created_at', { ascending: false }),
+      supabase
+        .from('concert_status')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', id)
+        .eq('status', 'interested'),
+      supabase
+        .from('concert_status')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', id)
+        .eq('status', 'going'),
     ]);
 
     if (!profileRes.error) setProfile(profileRes.data as UserProfile);
     setBuddyCount(buddyCountRes.data ?? 0);
+    setInterestedCount(interestedRes.count ?? 0);
+    setGoingCount(goingRes.count ?? 0);
 
     if (favRes.data) {
       setFavouriteArtists(
@@ -245,6 +259,20 @@ export default function UserProfileScreen() {
             icon="people-outline"
             label={`${buddyCount} ${buddyCount === 1 ? 'buddy' : 'buddies'}`}
             onPress={() => router.push({ pathname: '/buddies', params: { userId: id } })}
+          />
+        </View>
+
+        {/* Concert status row */}
+        <View style={styles.metaRow}>
+          <MetaItem
+            icon="star-outline"
+            label={`${interestedCount} geïnteresseerd`}
+            onPress={() => router.push({ pathname: '/my-concerts', params: { status: 'interested', userId: id } })}
+          />
+          <MetaItem
+            icon="checkmark-circle-outline"
+            label={`${goingCount} ${goingCount === 1 ? 'concert' : 'concerten'}`}
+            onPress={() => router.push({ pathname: '/my-concerts', params: { status: 'going', userId: id } })}
           />
         </View>
 

@@ -42,6 +42,7 @@ export default function ConcertDetailScreen() {
   const [groupDescription, setGroupDescription] = useState('');
   const [groupMaxMembers, setGroupMaxMembers] = useState('6');
   const [creating, setCreating] = useState(false);
+  const [concertStatus, setConcertStatus] = useState<'interested' | 'going' | null>(null);
 
   async function upsertEvent() {
     const dateTimeStr = params.date && params.time
@@ -99,6 +100,38 @@ export default function ConcertDetailScreen() {
   }, [params.id, user]);
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
+
+  // Fetch current concert status
+  useEffect(() => {
+    if (!user || !params.id) return;
+    supabase
+      .from('concert_status')
+      .select('status')
+      .eq('user_id', user.id)
+      .eq('event_id', params.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setConcertStatus(data?.status as 'interested' | 'going' | null);
+      });
+  }, [user, params.id]);
+
+  async function handleSetConcertStatus(status: 'interested' | 'going' | null) {
+    if (!user || !params.id) return;
+
+    if (status === null) {
+      // Remove status
+      await supabase.from('concert_status').delete().eq('user_id', user.id).eq('event_id', params.id);
+      setConcertStatus(null);
+    } else {
+      // Upsert event first so FK is satisfied
+      await upsertEvent();
+      await supabase.from('concert_status').upsert(
+        { user_id: user.id, event_id: params.id, status },
+        { onConflict: 'user_id,event_id' }
+      );
+      setConcertStatus(status);
+    }
+  }
 
   async function handleCreateGroup() {
     if (!user) { Alert.alert('Niet ingelogd', 'Log in om een groep aan te maken.'); return; }
@@ -191,6 +224,36 @@ export default function ConcertDetailScreen() {
             <Ionicons name="open-outline" size={16} color={Colors.text} />
           </TouchableOpacity>
         ) : null}
+
+        {/* Concert status buttons */}
+        <View style={styles.statusRow}>
+          <TouchableOpacity
+            style={[styles.statusBtn, concertStatus === 'interested' && styles.statusBtnActive]}
+            onPress={() => handleSetConcertStatus(concertStatus === 'interested' ? null : 'interested')}
+          >
+            <Ionicons
+              name={concertStatus === 'interested' ? 'star' : 'star-outline'}
+              size={16}
+              color={concertStatus === 'interested' ? Colors.primary : Colors.textSecondary}
+            />
+            <Text style={[styles.statusBtnText, concertStatus === 'interested' && styles.statusBtnTextActive]}>
+              Geïnteresseerd
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.statusBtn, concertStatus === 'going' && styles.statusBtnActive]}
+            onPress={() => handleSetConcertStatus(concertStatus === 'going' ? null : 'going')}
+          >
+            <Ionicons
+              name={concertStatus === 'going' ? 'checkmark-circle' : 'checkmark-circle-outline'}
+              size={16}
+              color={concertStatus === 'going' ? Colors.primary : Colors.textSecondary}
+            />
+            <Text style={[styles.statusBtnText, concertStatus === 'going' && styles.statusBtnTextActive]}>
+              Ik ga
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Groups section */}
         <View style={styles.groupsSection}>
@@ -475,4 +538,36 @@ const styles = StyleSheet.create({
   },
   createButtonDisabled: { opacity: 0.6 },
   createButtonText: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
+
+  // Concert status buttons
+  statusRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+  },
+  statusBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  statusBtnActive: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(29, 185, 84, 0.1)',
+  },
+  statusBtnText: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+  },
+  statusBtnTextActive: {
+    color: Colors.primary,
+  },
 });
