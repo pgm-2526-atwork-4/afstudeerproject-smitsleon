@@ -213,7 +213,7 @@ export default function NotificationsScreen() {
             <View style={styles.cardText}>
               <Text style={styles.cardName}>{item.first_name} {item.last_name}</Text>
               <Text style={isAccepted ? styles.positiveMsg : styles.neutralMsg}>
-                {isAccepted ? 'Jullie zijn nu buddies 🎉' : 'Wil jouw buddy worden'}
+                {isAccepted ? 'Jullie zijn nu buddies' : 'Wil jouw buddy worden'}
               </Text>
               <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
             </View>
@@ -264,7 +264,7 @@ export default function NotificationsScreen() {
               <Text style={styles.cardName}>
                 {item.accepter_first_name} {item.accepter_last_name}
               </Text>
-              <Text style={styles.positiveMsg}>heeft je buddy verzoek geaccepteerd 🎉</Text>
+              <Text style={styles.positiveMsg}>heeft je buddy verzoek geaccepteerd</Text>
               <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
             </View>
           </View>
