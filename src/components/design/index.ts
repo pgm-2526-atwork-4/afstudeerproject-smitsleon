@@ -6,6 +6,7 @@ export { ConcertCard } from './ConcertCard';
 export { ConcertSection } from './ConcertSection';
 export { EmptyState } from './EmptyState';
 export { LoadingScreen } from './LoadingScreen';
+export { LocationShareModal } from './LocationShareModal';
 export { MetaItem } from './MetaItem';
 export { ScreenHeader } from './ScreenHeader';
 export { SectionHeader } from './SectionHeader';

@@ -1,21 +1,24 @@
 import { ChatBubble } from '@/components/design/ChatBubble';
 import { ChatInput } from '@/components/design/ChatInput';
+import { LocationShareModal } from '@/components/design/LocationShareModal';
 import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
+import { useChatImages } from '@/core/useChatImages';
+import { useLiveLocation } from '@/core/useLiveLocation';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -50,6 +53,27 @@ export default function GroupChatScreen() {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  const LIVE_RE = /^📍LIVE:(.+)$/;
+
+  const sendLocationMsg = useCallback(
+    async (content: string) => {
+      if (!user) return;
+      await supabase.from('messages').insert({ group_id: id, user_id: user.id, content });
+    },
+    [id, user],
+  );
+
+  const live = useLiveLocation({
+    userId: user?.id,
+    groupId: id,
+    sendMessage: sendLocationMsg,
+  });
+
+  const images = useChatImages({
+    userId: user?.id,
+    sendMessage: sendLocationMsg,
+  });
 
   const parseMessage = (row: any): Message => ({
     id: row.id,
@@ -299,6 +323,10 @@ export default function GroupChatScreen() {
             isOwn={isOwn}
             isDeleted={!!item.deleted_at}
             onLongPress={isOwn ? () => handleDeleteMessage(item.id) : undefined}
+            liveLocation={(() => {
+              const m = item.content.match(LIVE_RE);
+              return m ? live.liveLocations[m[1]] ?? null : undefined;
+            })()}
           />
         </View>
 
@@ -370,7 +398,33 @@ export default function GroupChatScreen() {
         }
       />
 
-      <ChatInput value={text} onChange={setText} onSend={handleSend} sending={sending} />
+      {live.activeLiveId && (
+        <TouchableOpacity style={styles.liveBanner} onPress={live.stopSharing}>
+          <Ionicons name="radio" size={16} color={Colors.primary} />
+          <Text style={styles.liveBannerText}>Je deelt je live locatie</Text>
+          <Text style={styles.liveBannerStop}>Stop</Text>
+        </TouchableOpacity>
+      )}
+
+      <ChatInput
+        value={text}
+        onChange={setText}
+        onSend={handleSend}
+        sending={sending}
+        onLocationPress={() => live.setShowModal(true)}
+        locationLoading={live.loading}
+        onImagePress={images.pickAndSend}
+        imageLoading={images.imageLoading}
+      />
+
+      <LocationShareModal
+        visible={live.showModal}
+        onClose={() => live.setShowModal(false)}
+        onShareCurrent={live.shareCurrentLocation}
+        onShareLive={live.shareLiveLocation}
+        isSharing={!!live.activeLiveId}
+        onStopSharing={live.stopSharing}
+      />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -472,5 +526,26 @@ const styles = StyleSheet.create({
   messageTime: {
     color: Colors.textMuted,
     fontSize: 10,
+  },
+  liveBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.primary + '15',
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  liveBannerText: {
+    flex: 1,
+    color: Colors.primary,
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+  },
+  liveBannerStop: {
+    color: Colors.error,
+    fontSize: FontSizes.sm,
+    fontWeight: '700',
   },
 });
