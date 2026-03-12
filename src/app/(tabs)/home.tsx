@@ -1,13 +1,15 @@
+import { ConcertCard } from '@/components/design/ConcertCard';
 import { ConcertSection } from '@/components/design/ConcertSection';
+import { FilterModal } from '@/components/design/FilterModal';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { Artist, Event, Venue } from '@/core/types';
+import { Artist, Event, FilterState, Venue } from '@/core/types';
 import { useConcerts } from '@/core/useConcerts';
 import { useHomeSections } from '@/core/useHomeSections';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -23,7 +25,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  const { events, loading: searchLoading, error, searchConcerts } = useConcerts();
+  const { events, groupCounts, loading: searchLoading, error, searchConcerts } = useConcerts();
   const sections = useHomeSections();
   const { user } = useAuth();
   const [query, setQuery] = useState('');
@@ -31,6 +33,14 @@ export default function HomeScreen() {
   const [artistResults, setArtistResults] = useState<Artist[]>([]);
   const [venueResults, setVenueResults] = useState<Venue[]>([]);
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    groupsOnly: false,
+    minGroupSize: '',
+    maxGroupSize: '',
+    startDate: null,
+    endDate: null,
+  });
   const router = useRouter();
 
   const fetchUnreadCount = useCallback(async () => {
@@ -59,42 +69,83 @@ export default function HomeScreen() {
 
   const handleSearch = useCallback(() => {
     const q = query.trim();
-    if (q) {
+    const hasActiveFilters = filters.groupsOnly || filters.startDate || filters.endDate;
+    
+    if (q || hasActiveFilters) {
       setIsSearchActive(true);
-      searchConcerts(q);
-      supabase
-        .from('artists')
-        .select('*')
-        .ilike('name', `%${q}%`)
-        .limit(10)
-        .then(({ data }) =>
-          setArtistResults(
-            (data ?? []).map((a: any) => ({ id: a.id, name: a.name, imageUrl: a.image_url ?? '', genre: a.genre ?? '' }))
-          )
-        );
-      supabase
-        .from('venues')
-        .select('*')
-        .ilike('name', `%${q}%`)
-        .limit(10)
-        .then(({ data }) =>
-          setVenueResults(
-            (data ?? []).map((v: any) => ({
-              id: v.id,
-              name: v.name,
-              city: v.city ?? '',
-              address: v.address ?? '',
-              imageUrl: v.image_url ?? '',
-              latitude: v.latitude,
-              longitude: v.longitude,
-            }))
-          )
-        );
+      searchConcerts(q, filters);
+      
+      if (q) {
+        supabase
+          .from('artists')
+          .select('*')
+          .ilike('name', `%${q}%`)
+          .limit(10)
+          .then(({ data }) =>
+            setArtistResults(
+              (data ?? []).map((a: any) => ({ id: a.id, name: a.name, imageUrl: a.image_url ?? '', genre: a.genre ?? '' }))
+            )
+          );
+        supabase
+          .from('venues')
+          .select('*')
+          .ilike('name', `%${q}%`)
+          .limit(10)
+          .then(({ data }) =>
+            setVenueResults(
+              (data ?? []).map((v: any) => ({
+                id: v.id,
+                name: v.name,
+                city: v.city ?? '',
+                address: v.address ?? '',
+                imageUrl: v.image_url ?? '',
+                latitude: v.latitude,
+                longitude: v.longitude,
+              }))
+            )
+          );
+      } else {
+        setArtistResults([]);
+        setVenueResults([]);
+      }
+    } else {
+      setIsSearchActive(false);
+      sections.load();
     }
-  }, [query]);
+  }, [query, filters]);
+
+  const applyFilters = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    setIsFilterVisible(false);
+    
+    const q = query.trim();
+    const hasActiveFilters = newFilters.groupsOnly || newFilters.startDate || newFilters.endDate;
+    
+    if (q || hasActiveFilters) {
+      setIsSearchActive(true);
+      searchConcerts(q, newFilters);
+      if (!q) {
+        setArtistResults([]);
+        setVenueResults([]);
+      }
+    } else {
+      setIsSearchActive(false);
+      sections.load();
+    }
+  };
+
+  // Auto-search when query or filters change
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      handleSearch();
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, filters, handleSearch]);
 
   const handleClear = useCallback(() => {
     setQuery('');
+    setFilters({ groupsOnly: false, minGroupSize: '', maxGroupSize: '', startDate: null, endDate: null });
     setArtistResults([]);
     setVenueResults([]);
     setIsSearchActive(false);
@@ -102,20 +153,6 @@ export default function HomeScreen() {
 
   function navigateToEvent(event: Event) {
     router.push({ pathname: '/concert/[id]', params: { id: event.id } });
-  }
-
-  // Search results view
-  function renderSearchEvent({ item }: { item: Event }) {
-    return (
-      <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={() => navigateToEvent(item)}>
-        {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.image} /> : null}
-        <View style={styles.cardContent}>
-          <Text style={styles.eventName} numberOfLines={2}>{item.name}</Text>
-          <Text style={styles.eventDetails}>{item.venue}, {item.city}</Text>
-          <Text style={styles.eventDetails}>{item.date}</Text>
-        </View>
-      </TouchableOpacity>
-    );
   }
 
   return (
@@ -149,7 +186,6 @@ export default function HomeScreen() {
             placeholderTextColor={Colors.textMuted}
             value={query}
             onChangeText={setQuery}
-            onSubmitEditing={handleSearch}
             returnKeyType="search"
           />
           {query.length > 0 && (
@@ -158,10 +194,20 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Zoek</Text>
+        <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterVisible(!isFilterVisible)}>
+          <Ionicons name="options-outline" size={24} color={Colors.text} />
+          {(filters.groupsOnly || filters.startDate || filters.endDate) && (
+            <View style={styles.filterBadge} />
+          )}
         </TouchableOpacity>
       </View>
+      
+      <FilterModal 
+        visible={isFilterVisible}
+        onClose={() => setIsFilterVisible(false)}
+        initialFilters={filters}
+        onApply={applyFilters}
+      />
 
       {isSearchActive ? (
         /* ========== SEARCH RESULTS MODE ========== */
@@ -239,7 +285,7 @@ export default function HomeScreen() {
           ) : error ? (
             <View style={styles.center}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity onPress={() => searchConcerts()}>
+              <TouchableOpacity onPress={() => searchConcerts(query, filters)}>
                 <Text style={styles.retryText}>Opnieuw proberen</Text>
               </TouchableOpacity>
             </View>
@@ -247,9 +293,23 @@ export default function HomeScreen() {
             <FlatList
               data={events}
               keyExtractor={(item) => item.id}
-              renderItem={renderSearchEvent}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
               contentContainerStyle={styles.list}
               ListEmptyComponent={<Text style={styles.emptyText}>Geen evenementen gevonden.</Text>}
+              renderItem={({ item }) => (
+                <View style={styles.cardWrapper}>
+                  <ConcertCard
+                    name={item.name}
+                    date={item.date}
+                    venue={item.venue}
+                    imageUrl={item.imageUrl}
+                    groupCount={groupCounts[item.id] ?? 0}
+                    fill
+                    onPress={() => navigateToEvent(item)}
+                  />
+                </View>
+              )}
             />
           )}
         </>
@@ -362,13 +422,25 @@ const styles = StyleSheet.create({
   searchIcon: { marginRight: Spacing.sm },
   searchInput: { flex: 1, color: Colors.text, fontSize: FontSizes.sm, paddingVertical: 10 },
   clearButton: { marginLeft: Spacing.xs },
-  searchButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.lg,
+  filterButton: {
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    width: 44,
+    height: 44,
   },
-  searchButtonText: { color: Colors.text, fontWeight: 'bold', fontSize: FontSizes.sm },
+  filterBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+  },
   sectionsScroll: { paddingTop: Spacing.sm, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
   loadingText: { color: Colors.textSecondary, marginTop: Spacing.md },
@@ -378,11 +450,8 @@ const styles = StyleSheet.create({
 
   // Search results styles
   list: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl },
-  card: { backgroundColor: Colors.surface, borderRadius: Radius.md, marginBottom: Spacing.md, overflow: 'hidden' },
-  image: { width: '100%', height: 160 },
-  cardContent: { padding: Spacing.md },
-  eventName: { color: Colors.text, fontSize: 17, fontWeight: 'bold', marginBottom: 6 },
-  eventDetails: { color: Colors.textSecondary, fontSize: FontSizes.sm, marginBottom: 2 },
+  row: { justifyContent: 'space-between', marginBottom: Spacing.lg },
+  cardWrapper: { width: '48%' },
 
   // Artist search results
   artistSection: { paddingBottom: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: Spacing.sm },

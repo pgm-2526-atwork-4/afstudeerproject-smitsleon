@@ -6,17 +6,18 @@ interface Props {
   icon: keyof typeof Ionicons.glyphMap;
   iconColor?: string;
   label: string;
+  labelColor?: string;
   onPress?: () => void;
 }
 
 /**
  * A small icon + label pair used in profile meta rows (age, location, buddies, etc.)
  */
-export function MetaItem({ icon, iconColor = Colors.textSecondary, label, onPress }: Props) {
+export function MetaItem({ icon, iconColor = Colors.textSecondary, label, labelColor, onPress }: Props) {
   const content = (
     <>
       <Ionicons name={icon} size={14} color={iconColor} />
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, labelColor ? { color: labelColor } : null]}>{label}</Text>
     </>
   );
 

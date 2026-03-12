@@ -6,6 +6,7 @@ export { ChatInput } from './ChatInput';
 export { ConcertCard } from './ConcertCard';
 export { ConcertSection } from './ConcertSection';
 export { EmptyState } from './EmptyState';
+export { FilterModal } from './FilterModal';
 export { LoadingScreen } from './LoadingScreen';
 export { LocationShareModal } from './LocationShareModal';
 export { MetaItem } from './MetaItem';

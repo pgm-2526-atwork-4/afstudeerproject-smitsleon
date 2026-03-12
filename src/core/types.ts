@@ -129,3 +129,11 @@ export function calculateAge(birthDate: string): number {
   return age;
 }
 
+export interface FilterState {
+  groupsOnly: boolean;
+  minGroupSize: string;
+  maxGroupSize: string;
+  startDate: Date | null;
+  endDate: Date | null;
+}
+

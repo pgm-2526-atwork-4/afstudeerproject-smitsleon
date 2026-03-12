@@ -123,12 +123,16 @@ export default function ProfileScreen() {
         <View style={styles.metaRow}>
           <MetaItem
             icon="star-outline"
+            iconColor={Colors.primary}
             label={`${interestedCount} geïnteresseerd`}
+            labelColor={Colors.primary}
             onPress={() => router.push({ pathname: '/my-concerts', params: { status: 'interested' } })}
           />
           <MetaItem
             icon="checkmark-circle-outline"
+            iconColor={Colors.primary}
             label={`${goingCount} ${goingCount === 1 ? 'concert' : 'concerten'}`}
+            labelColor={Colors.primary}
             onPress={() => router.push({ pathname: '/my-concerts', params: { status: 'going' } })}
           />
         </View>
