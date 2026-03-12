@@ -1,8 +1,7 @@
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { getEvent } from '@/core/ticketmaster';
-import { Event, Group } from '@/core/types';
+import { dbRowToEvent, Event, Group } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -40,22 +39,28 @@ export default function ConcertDetailScreen() {
   const [creating, setCreating] = useState(false);
   const [concertStatus, setConcertStatus] = useState<'interested' | 'going' | null>(null);
 
-  // Fetch event data from Ticketmaster
+  // Fetch event data from Supabase
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoadingEvent(true);
-      const data = await getEvent(id);
+      const { data } = await supabase.from('events').select('*').eq('id', id).maybeSingle();
       if (!cancelled) {
-        setEvent(data);
+        setEvent(data ? dbRowToEvent(data) : null);
         setLoadingEvent(false);
       }
     })();
     return () => { cancelled = true; };
   }, [id]);
 
-  async function upsertEvent() {
+  // Ensure event row exists so FK constraints on groups / concert_status are satisfied.
+  // Events are synced from Ticketmaster, so the row should always exist already.
+  async function ensureEventExists() {
     if (!event) return;
+    const { data } = await supabase.from('events').select('id').eq('id', event.id).maybeSingle();
+    if (data) return; // already exists, nothing to do
+
+    // Fallback insert in case the row was somehow deleted
     const dateTimeStr = event.date && event.time
       ? `${event.date}T${event.time}`
       : event.date;
@@ -63,8 +68,11 @@ export default function ConcertDetailScreen() {
       id: event.id,
       name: event.name,
       date: dateTimeStr ? new Date(dateTimeStr).toISOString() : null,
-      location_name: event.venue ? `${event.venue}, ${event.city}` : null,
+      location_name: event.venue ?? null,
       image_url: event.imageUrl || null,
+      city: event.city || null,
+      time: event.time || null,
+      url: event.url || null,
     }, { onConflict: 'id' });
   }
 
@@ -134,8 +142,8 @@ export default function ConcertDetailScreen() {
       await supabase.from('concert_status').delete().eq('user_id', user.id).eq('event_id', id);
       setConcertStatus(null);
     } else {
-      // Upsert event first so FK is satisfied
-      await upsertEvent();
+      // Ensure event row exists so FK is satisfied
+      await ensureEventExists();
       await supabase.from('concert_status').upsert(
         { user_id: user.id, event_id: id, status },
         { onConflict: 'user_id,event_id' }
@@ -154,7 +162,7 @@ export default function ConcertDetailScreen() {
     }
     setCreating(true);
     try {
-      await upsertEvent();
+      await ensureEventExists();
       const { data: group, error: groupError } = await supabase
         .from('groups')
         .insert({ event_id: id, created_by: user.id, title: groupTitle.trim(), description: groupDescription.trim() || null, max_members: maxMembers })

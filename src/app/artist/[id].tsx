@@ -1,7 +1,6 @@
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { searchEvents } from '@/core/ticketmaster';
-import { Event } from '@/core/types';
+import { dbRowToEvent, Event } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -48,8 +47,14 @@ export default function ArtistProfileScreen() {
     if (!params.name) return;
     setLoadingEvents(true);
     try {
-      const events: Event[] = await searchEvents(params.name);
-      setUpcomingEvents(events);
+      const { data } = await supabase
+        .from('events')
+        .select('*')
+        .ilike('name', `%${params.name}%`)
+        .gte('date', new Date().toISOString())
+        .order('date', { ascending: true })
+        .limit(20);
+      setUpcomingEvents((data ?? []).map(dbRowToEvent));
     } catch (e) {
       console.error('Error fetching artist events:', e);
     }

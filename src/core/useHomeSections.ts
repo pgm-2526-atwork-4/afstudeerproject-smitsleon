@@ -1,8 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from './supabase';
-import { searchEvents } from './ticketmaster';
-import { Event } from './types';
+import { dbRowToEvent, Event } from './types';
 
 interface HomeSections {
   upcoming: Event[];
@@ -13,14 +12,24 @@ interface HomeSections {
   loading: boolean;
 }
 
+const NEARBY_RADIUS_KM = 30;
+
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 /**
- * Fetches all home page sections in parallel:
- * 1. Binnenkort — upcoming concerts from Ticketmaster
- * 2. Je buddies gaan ook — events where buddies have or joined groups
- * 3. Favoriete artiesten — events by favourite artists
+ * Fetches all home page sections from Supabase:
+ * 1. Binnenkort — upcoming concerts
+ * 2. Je buddies gaan ook — events where buddies have groups
+ * 3. Favoriete artiesten — events matching favourite artist names
  * 4. In de buurt — events near user's location
- *
- * Also fetches group counts for all loaded events.
  */
 export function useHomeSections() {
   const { user, profile } = useAuth();
@@ -35,14 +44,22 @@ export function useHomeSections() {
 
   const load = useCallback(async () => {
     setData((prev) => ({ ...prev, loading: true }));
+    const now = new Date().toISOString();
 
-    // 1. Upcoming concerts (Ticketmaster)
-    const upcomingPromise = searchEvents().catch(() => [] as Event[]);
+    // 1. Upcoming concerts
+    const upcomingPromise = (async (): Promise<Event[]> => {
+      const { data: rows } = await supabase
+        .from('events')
+        .select('*')
+        .gte('date', now)
+        .order('date', { ascending: true })
+        .limit(20);
+      return (rows ?? []).map(dbRowToEvent);
+    })();
 
-    // 2. Buddy events (Supabase)
+    // 2. Buddy events (already uses Supabase)
     const buddyPromise = (async (): Promise<Event[]> => {
       if (!user) return [];
-      // Get buddy IDs
       const { data: buddyRows } = await supabase
         .from('buddies')
         .select('user_id_1, user_id_2')
@@ -53,7 +70,6 @@ export function useHomeSections() {
       );
       if (buddyIds.length === 0) return [];
 
-      // Find groups where buddies are members
       const { data: memberRows } = await supabase
         .from('group_members')
         .select('group_id')
@@ -62,7 +78,6 @@ export function useHomeSections() {
       const groupIds = [...new Set((memberRows ?? []).map((r: any) => r.group_id))];
       if (groupIds.length === 0) return [];
 
-      // Get event IDs from those groups
       const { data: groupRows } = await supabase
         .from('groups')
         .select('event_id')
@@ -71,27 +86,17 @@ export function useHomeSections() {
       const eventIds = [...new Set((groupRows ?? []).map((r: any) => r.event_id))];
       if (eventIds.length === 0) return [];
 
-      // Fetch events from Supabase events table
       const { data: eventRows } = await supabase
         .from('events')
         .select('*')
         .in('id', eventIds)
-        .gte('date', new Date().toISOString())
+        .gte('date', now)
         .order('date', { ascending: true });
 
-      return (eventRows ?? []).map((e: any) => ({
-        id: e.id,
-        name: e.name,
-        date: e.date ?? '',
-        time: '',
-        venue: e.location_name ?? 'Onbekend',
-        venueId: '',
-        city: '',
-        imageUrl: e.image_url ?? '',
-      }));
+      return (eventRows ?? []).map(dbRowToEvent);
     })();
 
-    // 3. Favourite artist events (Ticketmaster)
+    // 3. Favourite artist events
     const favArtistPromise = (async (): Promise<Event[]> => {
       if (!user) return [];
       const { data: favRows } = await supabase
@@ -105,32 +110,44 @@ export function useHomeSections() {
         .filter(Boolean) as string[];
       if (artistNames.length === 0) return [];
 
-      // Search events for each artist in parallel
-      const results = await Promise.allSettled(
-        artistNames.map((name) => searchEvents(name))
-      );
-      const allEvents: Event[] = [];
-      const seen = new Set<string>();
-      for (const r of results) {
-        if (r.status === 'fulfilled') {
-          for (const e of r.value) {
-            if (!seen.has(e.id)) {
-              seen.add(e.id);
-              allEvents.push(e);
-            }
-          }
-        }
-      }
-      return allEvents.slice(0, 10);
+      // Search events whose name contains any of the artist names
+      const filter = artistNames.map((n) => `name.ilike.%${n}%`).join(',');
+      const { data: rows } = await supabase
+        .from('events')
+        .select('*')
+        .or(filter)
+        .gte('date', now)
+        .order('date', { ascending: true })
+        .limit(10);
+
+      return (rows ?? []).map(dbRowToEvent);
     })();
 
-    // 4. Nearby events (Ticketmaster with latlong)
+    // 4. Nearby events
     const nearbyPromise = (async (): Promise<Event[]> => {
       if (!profile?.share_location || !profile.latitude || !profile.longitude) return [];
-      return searchEvents(undefined, {
-        latlong: `${profile.latitude},${profile.longitude}`,
-        radius: 30,
-      }).catch(() => [] as Event[]);
+      const latDelta = NEARBY_RADIUS_KM / 111;
+      const lngDelta = NEARBY_RADIUS_KM / (111 * Math.cos((profile.latitude * Math.PI) / 180));
+
+      const { data: rows } = await supabase
+        .from('events')
+        .select('*')
+        .gte('date', now)
+        .gte('latitude', profile.latitude - latDelta)
+        .lte('latitude', profile.latitude + latDelta)
+        .gte('longitude', profile.longitude - lngDelta)
+        .lte('longitude', profile.longitude + lngDelta)
+        .order('date', { ascending: true })
+        .limit(20);
+
+      // Fine-grained distance filter
+      return (rows ?? [])
+        .filter((e: any) =>
+          e.latitude && e.longitude
+            ? distanceKm(profile.latitude!, profile.longitude!, e.latitude, e.longitude) <= NEARBY_RADIUS_KM
+            : false
+        )
+        .map(dbRowToEvent);
     })();
 
     const [upcoming, buddies, favouriteArtists, nearby] = await Promise.all([
@@ -160,7 +177,6 @@ export function useHomeSections() {
       }
     }
 
-    // Sort concerts with groups first in each section
     const sortWithGroups = (events: Event[]) =>
       [...events].sort((a, b) => (groupCounts[b.id] ?? 0) - (groupCounts[a.id] ?? 0));
 

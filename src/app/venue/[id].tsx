@@ -1,7 +1,6 @@
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { getVenue, getVenueEvents } from '@/core/ticketmaster';
-import { Event } from '@/core/types';
+import { dbRowToEvent, Event } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -48,10 +47,14 @@ export default function VenueDetailScreen() {
 
   const fetchVenueDetails = useCallback(async () => {
     if (!params.id) return;
-    const venue = await getVenue(params.id);
+    const { data: venue } = await supabase
+      .from('venues')
+      .select('*')
+      .eq('id', params.id)
+      .maybeSingle();
     if (venue) {
-      setVenueAddress(venue.address);
-      setVenueImageUrl(venue.imageUrl);
+      setVenueAddress(venue.address ?? '');
+      setVenueImageUrl(venue.image_url ?? '');
       setVenueLatitude(venue.latitude);
       setVenueLongitude(venue.longitude);
     }
@@ -61,8 +64,14 @@ export default function VenueDetailScreen() {
     if (!params.id) return;
     setLoadingEvents(true);
     try {
-      const events = await getVenueEvents(params.id);
-      setUpcomingEvents(events);
+      const { data } = await supabase
+        .from('events')
+        .select('*')
+        .eq('venue_id', params.id)
+        .gte('date', new Date().toISOString())
+        .order('date', { ascending: true })
+        .limit(20);
+      setUpcomingEvents((data ?? []).map(dbRowToEvent));
     } catch (e) {
       console.error('Error fetching venue events:', e);
     }

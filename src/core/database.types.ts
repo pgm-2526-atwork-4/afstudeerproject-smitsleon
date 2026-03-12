@@ -25,6 +25,12 @@ export interface DbEvent {
   date: string | null;
   location_name: string | null;
   image_url: string | null;
+  venue_id: string | null;
+  city: string | null;
+  time: string | null;
+  url: string | null;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
 }
 

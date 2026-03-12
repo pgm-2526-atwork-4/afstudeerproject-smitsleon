@@ -1,7 +1,6 @@
 import { ConcertSection } from '@/components/design/ConcertSection';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { searchAttractions, searchVenues } from '@/core/ticketmaster';
 import { Artist, Event, Venue } from '@/core/types';
 import { useConcerts } from '@/core/useConcerts';
 import { useHomeSections } from '@/core/useHomeSections';
@@ -63,8 +62,34 @@ export default function HomeScreen() {
     if (q) {
       setIsSearchActive(true);
       searchConcerts(q);
-      searchAttractions(q).then(setArtistResults).catch(() => setArtistResults([]));
-      searchVenues(q).then(setVenueResults).catch(() => setVenueResults([]));
+      supabase
+        .from('artists')
+        .select('*')
+        .ilike('name', `%${q}%`)
+        .limit(10)
+        .then(({ data }) =>
+          setArtistResults(
+            (data ?? []).map((a: any) => ({ id: a.id, name: a.name, imageUrl: a.image_url ?? '', genre: a.genre ?? '' }))
+          )
+        );
+      supabase
+        .from('venues')
+        .select('*')
+        .ilike('name', `%${q}%`)
+        .limit(10)
+        .then(({ data }) =>
+          setVenueResults(
+            (data ?? []).map((v: any) => ({
+              id: v.id,
+              name: v.name,
+              city: v.city ?? '',
+              address: v.address ?? '',
+              imageUrl: v.image_url ?? '',
+              latitude: v.latitude,
+              longitude: v.longitude,
+            }))
+          )
+        );
     }
   }, [query]);
 

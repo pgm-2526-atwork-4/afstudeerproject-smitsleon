@@ -3,14 +3,23 @@ import { EmptyState } from '@/components/design/EmptyState';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { searchEvents } from '@/core/ticketmaster';
-import { Event } from '@/core/types';
+import { dbRowToEvent, Event } from '@/core/types';
 import { Colors, FontSizes, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 type SectionType = 'upcoming' | 'buddies' | 'favouriteArtists' | 'nearby';
 
@@ -34,11 +43,19 @@ export default function SectionEventsScreen() {
   const fetchEvents = useCallback(async () => {
     setLoading(true);
     let result: Event[] = [];
+    const now = new Date().toISOString();
 
     switch (section) {
-      case 'upcoming':
-        result = await searchEvents().catch(() => []);
+      case 'upcoming': {
+        const { data: rows } = await supabase
+          .from('events')
+          .select('*')
+          .gte('date', now)
+          .order('date', { ascending: true })
+          .limit(50);
+        result = (rows ?? []).map(dbRowToEvent);
         break;
+      }
 
       case 'buddies': {
         if (!user) break;
@@ -66,18 +83,9 @@ export default function SectionEventsScreen() {
           .from('events')
           .select('*')
           .in('id', eventIds)
-          .gte('date', new Date().toISOString())
+          .gte('date', now)
           .order('date', { ascending: true });
-        result = (eventRows ?? []).map((e: any) => ({
-          id: e.id,
-          name: e.name,
-          date: e.date ?? '',
-          time: '',
-          venue: e.location_name ?? 'Onbekend',
-          venueId: e.venue_id ?? '',
-          city: '',
-          imageUrl: e.image_url ?? '',
-        }));
+        result = (eventRows ?? []).map(dbRowToEvent);
         break;
       }
 
@@ -90,24 +98,40 @@ export default function SectionEventsScreen() {
           .limit(5);
         const artistNames = (favRows ?? []).map((r: any) => r.artists?.name).filter(Boolean) as string[];
         if (artistNames.length === 0) break;
-        const results = await Promise.allSettled(artistNames.map((n) => searchEvents(n)));
-        const seen = new Set<string>();
-        for (const r of results) {
-          if (r.status === 'fulfilled') {
-            for (const e of r.value) {
-              if (!seen.has(e.id)) { seen.add(e.id); result.push(e); }
-            }
-          }
-        }
+        const filter = artistNames.map((n) => `name.ilike.%${n}%`).join(',');
+        const { data: rows } = await supabase
+          .from('events')
+          .select('*')
+          .or(filter)
+          .gte('date', now)
+          .order('date', { ascending: true })
+          .limit(20);
+        result = (rows ?? []).map(dbRowToEvent);
         break;
       }
 
       case 'nearby': {
         if (!profile?.share_location || !profile.latitude || !profile.longitude) break;
-        result = await searchEvents(undefined, {
-          latlong: `${profile.latitude},${profile.longitude}`,
-          radius: 50,
-        }).catch(() => []);
+        const radiusKm = 50;
+        const latDelta = radiusKm / 111;
+        const lngDelta = radiusKm / (111 * Math.cos((profile.latitude * Math.PI) / 180));
+        const { data: rows } = await supabase
+          .from('events')
+          .select('*')
+          .gte('date', now)
+          .gte('latitude', profile.latitude - latDelta)
+          .lte('latitude', profile.latitude + latDelta)
+          .gte('longitude', profile.longitude - lngDelta)
+          .lte('longitude', profile.longitude + lngDelta)
+          .order('date', { ascending: true })
+          .limit(50);
+        result = (rows ?? [])
+          .filter((e: any) =>
+            e.latitude && e.longitude
+              ? distanceKm(profile.latitude!, profile.longitude!, e.latitude, e.longitude) <= radiusKm
+              : false
+          )
+          .map(dbRowToEvent);
         break;
       }
     }

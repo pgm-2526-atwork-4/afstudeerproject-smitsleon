@@ -1,20 +1,33 @@
 import { useEffect, useState } from 'react';
-import { searchEvents } from './ticketmaster';
-import { Event } from './types';
+import { supabase } from './supabase';
+import { dbRowToEvent, Event } from './types';
 
 export function useConcerts() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load events (optionally with a search keyword)
   async function loadEvents(keyword?: string) {
     setLoading(true);
     setError(null);
 
     try {
-      const results = await searchEvents(keyword);
-      setEvents(results);
+      let query = supabase
+        .from('events')
+        .select('*')
+        .gte('date', new Date().toISOString())
+        .order('date', { ascending: true })
+        .limit(20);
+
+      if (keyword) {
+        query = query.or(
+          `name.ilike.%${keyword}%,location_name.ilike.%${keyword}%,city.ilike.%${keyword}%`
+        );
+      }
+
+      const { data, error: err } = await query;
+      if (err) throw err;
+      setEvents((data ?? []).map(dbRowToEvent));
     } catch (err) {
       setError('Kon evenementen niet laden. Probeer het later opnieuw.');
       console.error(err);
@@ -23,7 +36,6 @@ export function useConcerts() {
     }
   }
 
-  // Load events on mount
   useEffect(() => {
     loadEvents();
   }, []);
