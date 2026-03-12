@@ -1,5 +1,5 @@
 import { Colors } from '@/style/theme';
-import { Image, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Image, ImageStyle, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 interface Props {
   uri?: string | null;
@@ -19,11 +19,11 @@ export function UserAvatar({ uri, initials, size = 40, style }: Props) {
   };
 
   if (uri) {
-    return <Image source={{ uri }} style={[styles.base, circleStyle, style as any]} />;
+    return <Image source={{ uri }} style={[styles.base, circleStyle, style as StyleProp<ImageStyle>]} />;
   }
 
   return (
-    <View style={[styles.base, styles.placeholder, circleStyle, style as any]}>
+    <View style={[styles.base, styles.placeholder, circleStyle, style]}>
       <Text style={[styles.initials, { fontSize: size * 0.35 }]}>{initials}</Text>
     </View>
   );

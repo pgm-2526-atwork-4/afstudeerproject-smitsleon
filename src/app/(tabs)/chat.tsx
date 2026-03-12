@@ -121,11 +121,12 @@ export default function ChatScreen() {
         .order('created_at', { ascending: false });
 
       const lastMessages = new Map<string, { content: string; sender: string; sender_id: string; time: string }>();
-      for (const msg of (msgData ?? []) as any[]) {
+      for (const msg of msgData ?? []) {
         if (!lastMessages.has(msg.group_id)) {
+          const msgUser = Array.isArray(msg.users) ? msg.users[0] : msg.users;
           lastMessages.set(msg.group_id, {
             content: msg.content,
-            sender: msg.users?.first_name ?? '',
+            sender: msgUser?.first_name ?? '',
             sender_id: msg.user_id,
             time: msg.created_at,
           });
@@ -154,7 +155,7 @@ export default function ChatScreen() {
     if (pmData && pmData.length > 0) {
       // Group by conversation partner
       const convos = new Map<string, { content: string; time: string; sender_id: string }>();
-      for (const msg of pmData as any[]) {
+      for (const msg of pmData ?? []) {
         const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
         if (!convos.has(partnerId)) {
           convos.set(partnerId, { content: msg.content, time: msg.created_at, sender_id: msg.sender_id });
@@ -168,7 +169,7 @@ export default function ChatScreen() {
         .select('id, first_name, last_name, avatar_url')
         .in('id', partnerIds);
 
-      for (const partner of (usersData ?? []) as any[]) {
+      for (const partner of usersData ?? []) {
         const lastMsg = convos.get(partner.id);
         items.push({
           id: `pm-${partner.id}`,

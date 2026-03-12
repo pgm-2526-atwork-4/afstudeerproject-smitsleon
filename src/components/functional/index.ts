@@ -1,1 +1,1 @@
-export { NotificationBadge } from './NotificationBadge';
+// Functional components barrel

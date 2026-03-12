@@ -132,20 +132,7 @@ export default function SectionEventsScreen() {
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
   function navigateToEvent(event: Event) {
-    router.push({
-      pathname: '/concert/[id]',
-      params: {
-        id: event.id,
-        name: event.name,
-        date: event.date,
-        time: event.time,
-        venue: event.venue,
-        venueId: event.venueId,
-        city: event.city,
-        imageUrl: event.imageUrl,
-        url: event.url ?? '',
-      },
-    });
+    router.push({ pathname: '/concert/[id]', params: { id: event.id } });
   }
 
   if (loading) return <LoadingScreen />;

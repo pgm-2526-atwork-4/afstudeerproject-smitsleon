@@ -120,20 +120,7 @@ export default function MyConcertsScreen() {
               groupCount={groupCounts[item.id] ?? 0}
               fill
               onPress={() =>
-                router.push({
-                  pathname: '/concert/[id]',
-                  params: {
-                    id: item.id,
-                    name: item.name,
-                    date: item.date,
-                    time: item.time,
-                    venue: item.venue,
-                    venueId: item.venueId,
-                    city: item.city,
-                    imageUrl: item.imageUrl,
-                    url: '',
-                  },
-                })
+                router.push({ pathname: '/concert/[id]', params: { id: item.id } })
               }
             />
           </View>

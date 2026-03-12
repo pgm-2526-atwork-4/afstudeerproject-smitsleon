@@ -66,7 +66,7 @@ export function ChatBubble({ content, isOwn, isDeleted, onLongPress, liveLocatio
         delayLongPress={500}
         style={[styles.locationBubble, isOwn ? styles.own : styles.other]}
       >
-        <Ionicons name="radio" size={20} color={isActive ? Colors.primary : Colors.textMuted} />
+        <Ionicons name="radio" size={20} color={isActive ? Colors.text : Colors.textMuted} />
         <View style={styles.locationInfo}>
           <View style={styles.liveRow}>
             <Text style={[styles.locationTitle, !isActive && { color: Colors.textMuted }]}>

@@ -75,6 +75,14 @@ function toEvent(tm: TicketmasterEvent): Event {
   };
 }
 
+export async function getEvent(id: string): Promise<Event | null> {
+  const params = new URLSearchParams({ apikey: API_KEY ?? '' });
+  const response = await fetch(`${BASE_URL}/events/${encodeURIComponent(id)}.json?${params}`);
+  if (!response.ok) return null;
+  const data: TicketmasterEvent = await response.json();
+  return toEvent(data);
+}
+
 // Only music events in Belgium
 export async function searchEvents(keyword?: string, options?: { latlong?: string; radius?: number }): Promise<Event[]> {
   const params = new URLSearchParams({

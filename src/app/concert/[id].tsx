@@ -1,6 +1,8 @@
+import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { Group } from '@/core/types';
+import { getEvent } from '@/core/ticketmaster';
+import { Event, Group } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -22,18 +24,10 @@ import {
 export default function ConcertDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{
-    id: string;
-    name: string;
-    date: string;
-    time: string;
-    venue: string;
-    venueId: string;
-    city: string;
-    imageUrl: string;
-    url: string;
-  }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loadingEvent, setLoadingEvent] = useState(true);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -46,27 +40,42 @@ export default function ConcertDetailScreen() {
   const [creating, setCreating] = useState(false);
   const [concertStatus, setConcertStatus] = useState<'interested' | 'going' | null>(null);
 
+  // Fetch event data from Ticketmaster
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingEvent(true);
+      const data = await getEvent(id);
+      if (!cancelled) {
+        setEvent(data);
+        setLoadingEvent(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
   async function upsertEvent() {
-    const dateTimeStr = params.date && params.time
-      ? `${params.date}T${params.time}`
-      : params.date;
+    if (!event) return;
+    const dateTimeStr = event.date && event.time
+      ? `${event.date}T${event.time}`
+      : event.date;
     await supabase.from('events').upsert({
-      id: params.id,
-      name: params.name,
+      id: event.id,
+      name: event.name,
       date: dateTimeStr ? new Date(dateTimeStr).toISOString() : null,
-      location_name: params.venue ? `${params.venue}, ${params.city}` : null,
-      image_url: params.imageUrl || null,
+      location_name: event.venue ? `${event.venue}, ${event.city}` : null,
+      image_url: event.imageUrl || null,
     }, { onConflict: 'id' });
   }
 
   const fetchGroups = useCallback(async () => {
-    if (!params.id) return;
+    if (!id) return;
     setLoadingGroups(true);
 
     const { data, error } = await supabase
       .from('groups')
       .select(`*, member_count:group_members(count)`)
-      .eq('event_id', params.id)
+      .eq('event_id', id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -99,36 +108,36 @@ export default function ConcertDetailScreen() {
     }
 
     setLoadingGroups(false);
-  }, [params.id, user]);
+  }, [id, user]);
 
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
   // Fetch current concert status
   useEffect(() => {
-    if (!user || !params.id) return;
+    if (!user || !id) return;
     supabase
       .from('concert_status')
       .select('status')
       .eq('user_id', user.id)
-      .eq('event_id', params.id)
+      .eq('event_id', id)
       .maybeSingle()
       .then(({ data }) => {
         setConcertStatus(data?.status as 'interested' | 'going' | null);
       });
-  }, [user, params.id]);
+  }, [user, id]);
 
   async function handleSetConcertStatus(status: 'interested' | 'going' | null) {
-    if (!user || !params.id) return;
+    if (!user || !id) return;
 
     if (status === null) {
       // Remove status
-      await supabase.from('concert_status').delete().eq('user_id', user.id).eq('event_id', params.id);
+      await supabase.from('concert_status').delete().eq('user_id', user.id).eq('event_id', id);
       setConcertStatus(null);
     } else {
       // Upsert event first so FK is satisfied
       await upsertEvent();
       await supabase.from('concert_status').upsert(
-        { user_id: user.id, event_id: params.id, status },
+        { user_id: user.id, event_id: id, status },
         { onConflict: 'user_id,event_id' }
       );
       setConcertStatus(status);
@@ -148,7 +157,7 @@ export default function ConcertDetailScreen() {
       await upsertEvent();
       const { data: group, error: groupError } = await supabase
         .from('groups')
-        .insert({ event_id: params.id, created_by: user.id, title: groupTitle.trim(), description: groupDescription.trim() || null, max_members: maxMembers })
+        .insert({ event_id: id, created_by: user.id, title: groupTitle.trim(), description: groupDescription.trim() || null, max_members: maxMembers })
         .select()
         .single();
       if (groupError || !group) { Alert.alert('Fout', 'Groep aanmaken mislukt. Probeer opnieuw.'); setCreating(false); return; }
@@ -185,7 +194,7 @@ export default function ConcertDetailScreen() {
             type: 'group_joined',
             title: group.title,
             body: `${joinerName} heeft zich aangesloten bij de groep "${group.title}"`,
-            data: { group_id: group.id, joiner_user_id: user.id, event_id: params.id, event_name: params.name },
+            data: { group_id: group.id, joiner_user_id: user.id, event_id: id, event_name: event?.name },
           }))
         );
       }
@@ -194,18 +203,30 @@ export default function ConcertDetailScreen() {
     setJoiningGroupId(null);
   }
 
+  if (loadingEvent) return <LoadingScreen />;
+  if (!event) return (
+    <View style={styles.container}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: Colors.textSecondary, fontSize: FontSizes.md }}>Event niet gevonden</Text>
+        <TouchableOpacity style={{ marginTop: Spacing.md }} onPress={() => router.back()}>
+          <Text style={{ color: Colors.primary, fontSize: FontSizes.md }}>Ga terug</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <ScrollView>
         {/* Header image */}
         <View style={styles.imageWrapper}>
-          {params.imageUrl ? (
-            <Image source={{ uri: params.imageUrl }} style={styles.headerImage} />
+          {event?.imageUrl ? (
+            <Image source={{ uri: event.imageUrl }} style={styles.headerImage} />
           ) : (
             <View style={[styles.headerImage, { backgroundColor: Colors.surface }]} />
           )}
           <View style={styles.imageOverlay} />
-          <Text style={styles.artistName}>{params.name}</Text>
+          <Text style={styles.artistName}>{event?.name}</Text>
 
           {/* Back button */}
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -215,34 +236,34 @@ export default function ConcertDetailScreen() {
 
         {/* Event info */}
         <View style={styles.infoSection}>
-          <Text style={styles.tourName}>{params.name}</Text>
+          <Text style={styles.tourName}>{event?.name}</Text>
 
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
-            <Text style={styles.infoText}>{params.date}</Text>
+            <Text style={styles.infoText}>{event?.date}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <Ionicons name="time-outline" size={18} color={Colors.primary} />
-            <Text style={styles.infoText}>{params.time || 'Tijd nog onbekend'}</Text>
+            <Text style={styles.infoText}>{event?.time || 'Tijd nog onbekend'}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <Ionicons name="location-outline" size={18} color={Colors.primary} />
             <TouchableOpacity
-              onPress={() => params.venueId ? router.push({ pathname: '/venue/[id]', params: { id: params.venueId, name: params.venue, city: params.city } }) : undefined}
-              disabled={!params.venueId}
+              onPress={() => event?.venueId ? router.push({ pathname: '/venue/[id]', params: { id: event.venueId, name: event.venue, city: event.city } }) : undefined}
+              disabled={!event?.venueId}
             >
-              <Text style={[styles.infoText, params.venueId ? styles.linkText : undefined]}>{params.venue}, {params.city}</Text>
+              <Text style={[styles.infoText, event?.venueId ? styles.linkText : undefined]}>{event?.venue}, {event?.city}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Tickets button */}
-        {params.url ? (
+        {event?.url ? (
           <TouchableOpacity
             style={styles.ticketButton}
-            onPress={() => Linking.openURL(params.url)}
+            onPress={() => Linking.openURL(event.url!)}
           >
             <Text style={styles.ticketButtonText}>Tickets kopen</Text>
             <Ionicons name="open-outline" size={16} color={Colors.text} />
@@ -309,11 +330,11 @@ export default function ConcertDetailScreen() {
                       description: group.description ?? '',
                       max_members: String(group.max_members),
                       created_by: group.created_by,
-                      event_id: params.id,
-                      event_name: params.name,
-                      event_image_url: params.imageUrl ?? '',
-                      event_date: params.date ?? '',
-                      event_location: params.venue ? `${params.venue}, ${params.city}` : '',
+                      event_id: id,
+                      event_name: event?.name ?? '',
+                      event_image_url: event?.imageUrl ?? '',
+                      event_date: event?.date ?? '',
+                      event_location: event?.venue ? `${event.venue}, ${event.city}` : '',
                     },
                   });
                 }}

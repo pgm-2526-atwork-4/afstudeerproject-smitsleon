@@ -7,13 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function ArtistProfileScreen() {
@@ -158,20 +158,7 @@ export default function ArtistProfileScreen() {
                 style={styles.eventCard}
                 activeOpacity={0.7}
                 onPress={() =>
-                  router.push({
-                    pathname: '/concert/[id]',
-                    params: {
-                      id: event.id,
-                      name: event.name,
-                      date: event.date,
-                      time: event.time,
-                      venue: event.venue,
-                      venueId: event.venueId,
-                      city: event.city,
-                      imageUrl: event.imageUrl,
-                      url: event.url ?? '',
-                    },
-                  })
+                  router.push({ pathname: '/concert/[id]', params: { id: event.id } })
                 }
               >
                 {event.imageUrl ? (

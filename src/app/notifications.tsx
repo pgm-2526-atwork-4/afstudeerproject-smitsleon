@@ -119,7 +119,7 @@ export default function NotificationsScreen() {
         .from('users')
         .select('id, first_name, last_name, avatar_url')
         .in('id', extraUserIds);
-      for (const u of (extraUsers ?? []) as any[]) {
+      for (const u of extraUsers ?? []) {
         userInfoMap[u.id] = { first_name: u.first_name, last_name: u.last_name, avatar_url: u.avatar_url ?? null };
       }
     }
@@ -302,6 +302,7 @@ export default function NotificationsScreen() {
               .eq('id', groupId)
               .single();
             if (g) {
+              const ev = Array.isArray(g.events) ? g.events[0] : g.events;
               router.push({
                 pathname: '/group/[id]',
                 params: {
@@ -311,10 +312,10 @@ export default function NotificationsScreen() {
                   max_members: String(g.max_members ?? 6),
                   created_by: g.created_by ?? '',
                   event_id: g.event_id ?? '',
-                  event_name: (g as any).events?.name ?? '',
-                  event_image_url: (g as any).events?.image_url ?? '',
-                  event_date: (g as any).events?.date ?? '',
-                  event_location: (g as any).events?.location_name ?? '',
+                  event_name: ev?.name ?? '',
+                  event_image_url: ev?.image_url ?? '',
+                  event_date: ev?.date ?? '',
+                  event_location: ev?.location_name ?? '',
                 },
               });
             }

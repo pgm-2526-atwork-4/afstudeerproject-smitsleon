@@ -73,7 +73,7 @@ export function useLiveLocation({ userId, groupId, otherUserId, sendMessage }: O
         'postgres_changes',
         { event: '*', schema: 'public', table: 'live_locations' },
         (payload) => {
-          const loc = (payload.eventType === 'DELETE' ? payload.old : payload.new) as any;
+          const loc = payload.eventType === 'DELETE' ? payload.old : payload.new;
           const relevant =
             (loc.user_id === userId && loc.receiver_id === otherUserId) ||
             (loc.user_id === otherUserId && loc.receiver_id === userId);
