@@ -22,7 +22,7 @@ const CAT_COLORS = {
 const CAT_LABELS: Record<string, string> = {
   interested: 'Geïnteresseerd',
   going: 'Ik ga',
-  group: 'Groep',
+  group: 'Met groep',
 };
 
 /* ── types ── */
