@@ -14,14 +14,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type BuddyStatus = 'none' | 'pending_incoming' | 'pending_outgoing' | 'buddies';
@@ -225,6 +225,17 @@ export default function UserProfileScreen() {
   }
 
   // --- Loading / Error states ---
+  if (!currentUser) {
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+        </TouchableOpacity>
+        <EmptyState icon="lock-closed-outline" title="Niet beschikbaar" subtitle="Log in om profielen te bekijken." />
+      </View>
+    );
+  }
+
   if (loading) return <LoadingScreen />;
   if (!profile) {
     return (

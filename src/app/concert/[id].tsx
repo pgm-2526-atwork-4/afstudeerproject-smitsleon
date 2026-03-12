@@ -8,17 +8,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Linking,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Linking,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function ConcertDetailScreen() {
@@ -270,7 +270,8 @@ export default function ConcertDetailScreen() {
           </TouchableOpacity>
         ) : null}
 
-        {/* Concert status buttons */}
+        {/* Concert status buttons — logged-in only */}
+        {user && (
         <View style={styles.statusRow}>
           <TouchableOpacity
             style={[styles.statusBtn, concertStatus === 'interested' && styles.statusBtnActive]}
@@ -299,15 +300,18 @@ export default function ConcertDetailScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+        )}
 
         {/* Groups section */}
         <View style={styles.groupsSection}>
           <View style={styles.groupsHeader}>
             <Text style={styles.groupsTitle}>Groepen</Text>
+            {user && (
             <TouchableOpacity style={styles.newGroupButton} onPress={() => setModalVisible(true)}>
               <Ionicons name="add" size={18} color={Colors.text} />
               <Text style={styles.newGroupButtonText}>Nieuwe groep</Text>
             </TouchableOpacity>
+            )}
           </View>
 
           {loadingGroups ? (
@@ -321,7 +325,7 @@ export default function ConcertDetailScreen() {
                 style={styles.groupCard}
                 activeOpacity={0.75}
                 onPress={() => {
-                  const pathname = group.is_member ? '/group/chat' : '/group/[id]';
+                  const pathname = (user && group.is_member) ? '/group/chat' : '/group/[id]';
                   router.push({
                     pathname,
                     params: {
@@ -356,7 +360,7 @@ export default function ConcertDetailScreen() {
                     <Ionicons name="people-outline" size={14} color={Colors.textSecondary} />
                     <Text style={styles.memberCountText}>{group.member_count} / {group.max_members} leden</Text>
                   </View>
-                  {group.is_member ? (
+                  {user && (group.is_member ? (
                     <View style={styles.joinedBadge}>
                       <Ionicons name="checkmark" size={14} color={Colors.primary} />
                       <Text style={styles.joinedBadgeText}>Lid</Text>
@@ -372,7 +376,7 @@ export default function ConcertDetailScreen() {
                         : <Text style={styles.joinButtonText}>{(group.member_count ?? 0) >= group.max_members ? 'Vol' : 'Deelnemen'}</Text>
                       }
                     </TouchableOpacity>
-                  )}
+                  ))}
                 </View>
               </TouchableOpacity>
             ))

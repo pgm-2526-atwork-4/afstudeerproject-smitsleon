@@ -136,6 +136,7 @@ export default function VenueDetailScreen() {
           </TouchableOpacity>
 
           {/* Favourite button */}
+          {user && (
           <TouchableOpacity
             style={styles.favButton}
             onPress={handleToggleFavourite}
@@ -151,6 +152,7 @@ export default function VenueDetailScreen() {
               />
             )}
           </TouchableOpacity>
+          )}
         </View>
 
         {/* Venue info */}

@@ -113,6 +113,7 @@ export default function ArtistProfileScreen() {
           </TouchableOpacity>
 
           {/* Favourite button */}
+          {user && (
           <TouchableOpacity
             style={styles.favButton}
             onPress={handleToggleFavourite}
@@ -128,6 +129,7 @@ export default function ArtistProfileScreen() {
               />
             )}
           </TouchableOpacity>
+          )}
         </View>
 
         {/* Genre badge */}

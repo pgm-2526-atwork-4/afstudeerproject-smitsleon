@@ -1,4 +1,5 @@
 import { ArtistChip, ArtistChipsGrid } from '@/components/design/ArtistChipsGrid';
+import { AuthWall } from '@/components/design/AuthWall';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { MetaItem } from '@/components/design/MetaItem';
 import { SectionHeader } from '@/components/design/SectionHeader';
@@ -78,6 +79,15 @@ export default function ProfileScreen() {
   }, [user]);
 
   useFocusEffect(useCallback(() => { fetchData(); }, [fetchData]));
+
+  if (!user) {
+    return (
+      <AuthWall
+        title="Bekijk je profiel"
+        subtitle="Log in om je profiel te bekijken en te bewerken."
+      />
+    );
+  }
 
   if (!profile) return <LoadingScreen />;
 

@@ -10,16 +10,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -98,6 +98,7 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={styles.headerRow}>
         <Text style={styles.title}>Concert Buddy</Text>
+        {user ? (
         <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')}>
           <Ionicons name="notifications-outline" size={24} color={Colors.text} />
           {unreadCount > 0 && (
@@ -106,6 +107,11 @@ export default function HomeScreen() {
             </View>
           )}
         </TouchableOpacity>
+        ) : (
+        <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/(auth)/login')}>
+          <Ionicons name="log-in-outline" size={24} color={Colors.primary} />
+        </TouchableOpacity>
+        )}
       </View>
 
       {/* Search bar */}

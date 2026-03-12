@@ -1,3 +1,4 @@
+import { AuthWall } from '@/components/design/AuthWall';
 import { ConcertCard } from '@/components/design/ConcertCard';
 import { EmptyState } from '@/components/design/EmptyState';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
@@ -163,6 +164,15 @@ export default function CalendarScreen() {
   const handleDayPress = useCallback((day: DateData) => {
     setSelectedDate((prev) => (prev === day.dateString ? null : day.dateString));
   }, []);
+
+  if (!user) {
+    return (
+      <AuthWall
+        title="Bekijk je agenda"
+        subtitle="Log in om je concertagenda te bekijken en bij te houden."
+      />
+    );
+  }
 
   if (loading) return <LoadingScreen />;
 

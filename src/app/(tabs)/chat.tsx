@@ -1,3 +1,4 @@
+import { AuthWall } from '@/components/design/AuthWall';
 import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
@@ -7,14 +8,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -331,6 +332,15 @@ export default function ChatScreen() {
           <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
         </View>
       </TouchableOpacity>
+    );
+  }
+
+  if (!user) {
+    return (
+      <AuthWall
+        title="Bekijk je berichten"
+        subtitle="Log in om te chatten met je groepen en buddies."
+      />
     );
   }
 
