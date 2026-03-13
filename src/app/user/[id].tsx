@@ -62,14 +62,16 @@ export default function UserProfileScreen() {
         .order('created_at', { ascending: false }),
       supabase
         .from('concert_status')
-        .select('*', { count: 'exact', head: true })
+        .select('event_id, events!inner(date)', { count: 'exact', head: true })
         .eq('user_id', id)
-        .eq('status', 'interested'),
+        .eq('status', 'interested')
+        .gte('events.date', new Date().toISOString()),
       supabase
         .from('concert_status')
-        .select('*', { count: 'exact', head: true })
+        .select('event_id, events!inner(date)', { count: 'exact', head: true })
         .eq('user_id', id)
-        .eq('status', 'going'),
+        .eq('status', 'going')
+        .gte('events.date', new Date().toISOString()),
     ]);
 
     if (!profileRes.error) setProfile(profileRes.data as UserProfile);

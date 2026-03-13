@@ -41,14 +41,16 @@ export default function ProfileScreen() {
         .order('created_at', { ascending: false }),
       supabase
         .from('concert_status')
-        .select('*', { count: 'exact', head: true })
+        .select('event_id, events!inner(date)', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('status', 'interested'),
+        .eq('status', 'interested')
+        .gte('events.date', new Date().toISOString()),
       supabase
         .from('concert_status')
-        .select('*', { count: 'exact', head: true })
+        .select('event_id, events!inner(date)', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('status', 'going'),
+        .eq('status', 'going')
+        .gte('events.date', new Date().toISOString()),
     ]);
 
     setBuddyCount(buddyRes.data ?? 0);
