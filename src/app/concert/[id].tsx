@@ -254,7 +254,11 @@ export default function ConcertDetailScreen() {
 
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
-            <Text style={styles.infoText}>{event?.date}</Text>
+            <Text style={styles.infoText}>
+              {event?.date
+                ? new Date(event.date).toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                : 'Datum onbekend'}
+            </Text>
           </View>
 
           <View style={styles.infoRow}>
