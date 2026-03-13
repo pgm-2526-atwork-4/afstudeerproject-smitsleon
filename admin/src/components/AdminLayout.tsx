@@ -1,0 +1,77 @@
+import { NavLink, Outlet } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+const NAV_ITEMS = [
+  { to: '/', label: 'Dashboard', icon: '📊' },
+  { to: '/reports', label: 'Reports', icon: '🚩' },
+  { to: '/events', label: 'Events', icon: '🎵' },
+  { to: '/artists', label: 'Artiesten', icon: '🎤' },
+  { to: '/venues', label: 'Venues', icon: '📍' },
+  { to: '/users', label: 'Gebruikers', icon: '👥' },
+];
+
+export default function AdminLayout() {
+  const { profile, signOut } = useAuth();
+
+  return (
+    <div className="min-h-screen flex bg-cb-bg">
+      {/* Sidebar */}
+      <aside className="w-64 shrink-0 bg-cb-surface border-r border-cb-border flex flex-col">
+        {/* Logo */}
+        <div className="px-6 py-5 border-b border-cb-border">
+          <h1 className="text-lg font-bold text-cb-primary">🎶 Concert Buddy</h1>
+          <p className="text-xs text-cb-text-muted mt-1">Admin Panel</p>
+        </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-cb-primary/15 text-cb-primary'
+                    : 'text-cb-text-secondary hover:bg-cb-surface-light hover:text-cb-text'
+                }`
+              }
+            >
+              <span className="text-base">{item.icon}</span>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* User info + logout */}
+        <div className="px-4 py-4 border-t border-cb-border">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-cb-primary/20 flex items-center justify-center text-sm font-bold text-cb-primary">
+              {profile?.first_name?.[0]?.toUpperCase() ?? 'A'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-cb-text truncate">
+                {profile?.first_name} {profile?.last_name}
+              </p>
+              <p className="text-xs text-cb-text-muted">Admin</p>
+            </div>
+          </div>
+          <button
+            onClick={signOut}
+            className="mt-3 w-full text-left text-xs text-cb-text-muted hover:text-cb-error transition-colors cursor-pointer"
+          >
+            Uitloggen
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-auto">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
+}
