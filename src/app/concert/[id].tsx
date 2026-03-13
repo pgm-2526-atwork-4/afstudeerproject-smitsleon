@@ -169,7 +169,7 @@ export default function ConcertDetailScreen() {
         .select()
         .single();
       if (groupError || !group) { Alert.alert('Fout', 'Groep aanmaken mislukt. Probeer opnieuw.'); setCreating(false); return; }
-      await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id });
+      await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id, role: 'admin' });
       setGroupTitle(''); setGroupDescription(''); setGroupMaxMembers(6);
       setModalVisible(false);
       await fetchGroups();

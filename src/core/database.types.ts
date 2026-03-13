@@ -52,6 +52,7 @@ export interface DbGroupMember {
   group_id: string;
   user_id: string;
   joined_at: string;
+  role: 'admin' | 'member';
 }
 
 export interface DbMessage {
