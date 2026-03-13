@@ -29,6 +29,7 @@ interface ChatItem {
   last_message_sender: string | null;
   last_message_sender_id: string | null;
   last_message_time: string | null;
+  created_at: string | null;
   // Group-specific
   event_id?: string;
   event_name?: string;
@@ -99,6 +100,7 @@ export default function ChatScreen() {
           last_message_sender: null,
           last_message_sender_id: null,
           last_message_time: null,
+          created_at: row.joined_at ?? null,
           event_id: g.event_id,
           event_name: g.events?.name ?? 'Onbekend concert',
           event_date: g.events?.date ?? null,
@@ -181,6 +183,7 @@ export default function ChatScreen() {
           last_message_sender: partner.first_name,
           last_message_sender_id: lastMsg?.sender_id ?? null,
           last_message_time: lastMsg?.time ?? null,
+          created_at: lastMsg?.time ?? null,
           buddy_user_id: partner.id,
           buddy_first_name: partner.first_name,
           buddy_last_name: partner.last_name,
@@ -191,8 +194,8 @@ export default function ChatScreen() {
 
     // Sort all items by last message time
     items.sort((a, b) => {
-      const timeA = a.last_message_time ? new Date(a.last_message_time).getTime() : 0;
-      const timeB = b.last_message_time ? new Date(b.last_message_time).getTime() : 0;
+      const timeA = a.last_message_time ? new Date(a.last_message_time).getTime() : (a.created_at ? new Date(a.created_at).getTime() : 0);
+      const timeB = b.last_message_time ? new Date(b.last_message_time).getTime() : (b.created_at ? new Date(b.created_at).getTime() : 0);
       return timeB - timeA;
     });
 
