@@ -6,6 +6,7 @@ import { Image, Linking, Modal, Platform, Pressable, StyleSheet, Text, Touchable
 const LOCATION_REGEX = /^📍\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/;
 const LIVE_LOCATION_REGEX = /^📍LIVE:(.+)$/;
 const IMAGE_REGEX = /^📷\s+(https?:\/\/.+)$/;
+export const SYSTEM_REGEX = /^🔔\s+(.+)$/;
 
 function openInMaps(lat: number, lng: number) {
   const url = Platform.select({
@@ -47,6 +48,16 @@ export function ChatBubble({ content, isOwn, isDeleted, onLongPress, liveLocatio
     return (
       <View style={[styles.bubble, styles.deleted]}>
         <Text style={styles.deletedText}>Dit bericht is verwijderd</Text>
+      </View>
+    );
+  }
+
+  // --- System message ---
+  const sysMatch = content.match(SYSTEM_REGEX);
+  if (sysMatch) {
+    return (
+      <View style={styles.systemBubble}>
+        <Text style={styles.systemText}>{sysMatch[1]}</Text>
       </View>
     );
   }
@@ -228,5 +239,18 @@ const styles = StyleSheet.create({
   fullscreenImage: {
     width: '100%',
     height: '80%',
+  },
+  systemBubble: {
+    alignSelf: 'center',
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: 9999,
+    maxWidth: '85%',
+  },
+  systemText: {
+    color: Colors.textMuted,
+    fontSize: FontSizes.xs,
+    textAlign: 'center',
   },
 });

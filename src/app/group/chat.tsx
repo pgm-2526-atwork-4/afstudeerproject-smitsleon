@@ -1,4 +1,4 @@
-import { ChatBubble } from '@/components/design/ChatBubble';
+import { ChatBubble, SYSTEM_REGEX } from '@/components/design/ChatBubble';
 import { ChatInput } from '@/components/design/ChatInput';
 import { LocationShareModal } from '@/components/design/LocationShareModal';
 import { UserAvatar } from '@/components/design/UserAvatar';
@@ -40,9 +40,11 @@ export default function GroupChatScreen() {
     const isOwn = item.user_id === user?.id;
     const showDate = chat.shouldShowDateSeparator(index);
     const initials = `${item.first_name.charAt(0)}${item.last_name.charAt(0)}`.toUpperCase();
+    const isSystem = SYSTEM_REGEX.test(item.content);
 
     const showSender =
       !isOwn &&
+      !isSystem &&
       (index === 0 ||
         showDate ||
         chat.messages[index - 1].user_id !== item.user_id);
@@ -55,38 +57,50 @@ export default function GroupChatScreen() {
           </View>
         )}
 
-        {showSender && (
-          <View style={styles.senderNameRow}>
-            <View style={styles.messageAvatarSpacer} />
-            <Text style={styles.senderName}>{item.first_name}</Text>
+        {isSystem ? (
+          <View style={styles.systemRow}>
+            <ChatBubble
+              content={item.content}
+              isOwn={false}
+              isDeleted={!!item.deleted_at}
+            />
           </View>
-        )}
+        ) : (
+          <>
+            {showSender && (
+              <View style={styles.senderNameRow}>
+                <View style={styles.messageAvatarSpacer} />
+                <Text style={styles.senderName}>{item.first_name}</Text>
+              </View>
+            )}
 
-        <View style={[styles.messageRow, isOwn && styles.messageRowOwn]}>
-          {!isOwn && showSender && (
-            <TouchableOpacity onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.user_id } })}>
-              <UserAvatar uri={item.avatar_url} initials={initials} size={28} />
-            </TouchableOpacity>
-          )}
-          {!isOwn && !showSender && <View style={styles.messageAvatarSpacer} />}
+            <View style={[styles.messageRow, isOwn && styles.messageRowOwn]}>
+              {!isOwn && showSender && (
+                <TouchableOpacity onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.user_id } })}>
+                  <UserAvatar uri={item.avatar_url} initials={initials} size={28} />
+                </TouchableOpacity>
+              )}
+              {!isOwn && !showSender && <View style={styles.messageAvatarSpacer} />}
 
-          <ChatBubble
-            content={item.content}
-            isOwn={isOwn}
-            isDeleted={!!item.deleted_at}
-            onLongPress={isOwn ? () => chat.handleDeleteMessage(item.id) : undefined}
-            liveLocation={(() => {
-              const m = item.content.match(chat.LIVE_RE);
-              return m ? chat.live.liveLocations[m[1]] ?? null : undefined;
-            })()}
-          />
-        </View>
+              <ChatBubble
+                content={item.content}
+                isOwn={isOwn}
+                isDeleted={!!item.deleted_at}
+                onLongPress={isOwn ? () => chat.handleDeleteMessage(item.id) : undefined}
+                liveLocation={(() => {
+                  const m = item.content.match(chat.LIVE_RE);
+                  return m ? chat.live.liveLocations[m[1]] ?? null : undefined;
+                })()}
+              />
+            </View>
 
-        {chat.shouldShowTime(index) && (
-          <View style={[styles.timeRow, isOwn && styles.timeRowOwn]}>
-            {!isOwn && <View style={styles.messageAvatarSpacer} />}
-            <Text style={styles.messageTime}>{formatTime(item.created_at)}</Text>
-          </View>
+            {chat.shouldShowTime(index) && (
+              <View style={[styles.timeRow, isOwn && styles.timeRowOwn]}>
+                {!isOwn && <View style={styles.messageAvatarSpacer} />}
+                <Text style={styles.messageTime}>{formatTime(item.created_at)}</Text>
+              </View>
+            )}
+          </>
         )}
       </View>
     );
@@ -293,6 +307,10 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: FontSizes.sm,
     fontWeight: '600',
+  },
+  systemRow: {
+    alignItems: 'center',
+    marginVertical: Spacing.xs,
   },
   liveBannerStop: {
     color: Colors.error,

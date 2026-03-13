@@ -33,7 +33,7 @@ interface Member {
 
 export default function GroupDetailScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const params = useLocalSearchParams<{
     id: string;
     title: string;
@@ -156,6 +156,7 @@ export default function GroupDetailScreen() {
           setLeaving(true);
           if (isLastAdmin) {
             await supabase.from('group_members').delete().eq('group_id', params.id);
+            // No system message needed — group is being deleted
             const { error } = await supabase.from('groups').delete().eq('id', params.id);
             if (error) {
               Alert.alert('Fout', 'Groep verwijderen mislukt. Probeer opnieuw.');
@@ -163,6 +164,13 @@ export default function GroupDetailScreen() {
               return;
             }
           } else {
+            const displayName = profile?.first_name || 'Iemand';
+            // Insert system message BEFORE deleting membership (RLS requires membership)
+            await supabase.from('messages').insert({
+              group_id: params.id,
+              user_id: user.id,
+              content: `🔔 ${displayName} heeft de groep verlaten`,
+            });
             const { error } = await supabase
               .from('group_members')
               .delete()
@@ -197,6 +205,12 @@ export default function GroupDetailScreen() {
     if (error) {
       Alert.alert('Fout', 'Deelnemen mislukt. Probeer opnieuw.');
     } else {
+      const displayName = profile?.first_name || 'Iemand';
+      await supabase.from('messages').insert({
+        group_id: params.id,
+        user_id: user.id,
+        content: `🔔 ${displayName} heeft zich aangesloten bij de groep`,
+      });
       await fetchMembers();
     }
     setJoining(false);
@@ -365,6 +379,12 @@ export default function GroupDetailScreen() {
             if (error) {
               Alert.alert('Fout', 'Verwijderen mislukt. Probeer opnieuw.');
             } else {
+              const adminName = profile?.first_name || 'Een beheerder';
+              await supabase.from('messages').insert({
+                group_id: params.id,
+                user_id: user!.id,
+                content: `🔔 ${member.first_name} is verwijderd uit de groep door ${adminName}`,
+              });
               await fetchMembers();
             }
           },
