@@ -1,11 +1,11 @@
 import { Session, User } from '@supabase/supabase-js';
 import {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
+    createContext,
+    ReactNode,
+    useCallback,
+    useContext,
+    useEffect,
+    useState,
 } from 'react';
 import { supabase, supabaseAdmin } from '../lib/supabase';
 import type { DbUser } from '../lib/types';
