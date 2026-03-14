@@ -1,8 +1,249 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { supabaseAdmin } from '../lib/supabase';
+import type { DbReport, DbUser, ReportStatus } from '../lib/types';
+
+type ReportRow = DbReport & { reporter: DbUser; reported: DbUser };
+
+const REASON_LABELS: Record<string, string> = {
+  spam: 'Spam',
+  ongepast_gedrag: 'Ongepast gedrag',
+  nep_profiel: 'Nep profiel',
+  intimidatie: 'Intimidatie',
+  andere: 'Andere',
+};
+
+const STATUS_OPTIONS: { value: ReportStatus | 'all'; label: string }[] = [
+  { value: 'all', label: 'Alle' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'reviewed', label: 'Reviewed' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'dismissed', label: 'Dismissed' },
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-500/15 text-yellow-400',
+  reviewed: 'bg-blue-500/15 text-blue-400',
+  resolved: 'bg-green-500/15 text-green-400',
+  dismissed: 'bg-cb-text-muted/15 text-cb-text-muted',
+};
+
 export default function ReportsPage() {
+  const { profile } = useAuth();
+  const [reports, setReports] = useState<ReportRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<ReportStatus | 'all'>('all');
+  const [selected, setSelected] = useState<ReportRow | null>(null);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
+    let query = supabaseAdmin
+      .from('reports')
+      .select('*, reporter:users!reports_reporter_id_fkey(*), reported:users!reports_reported_user_id_fkey(*)')
+      .order('created_at', { ascending: false });
+
+    if (filter !== 'all') query = query.eq('status', filter);
+
+    const { data } = await query;
+    setReports(
+      (data ?? []).map((r: Record<string, unknown>) => ({
+        ...(r as unknown as DbReport),
+        reporter: r.reporter as unknown as DbUser,
+        reported: r.reported as unknown as DbUser,
+      })),
+    );
+    setLoading(false);
+  }, [filter]);
+
+  useEffect(() => { fetchReports(); }, [fetchReports]);
+
+  function openDetail(report: ReportRow) {
+    setSelected(report);
+    setAdminNotes(report.admin_notes ?? '');
+  }
+
+  async function updateStatus(newStatus: ReportStatus) {
+    if (!selected || !profile) return;
+    setSaving(true);
+    await supabaseAdmin
+      .from('reports')
+      .update({
+        status: newStatus,
+        admin_notes: adminNotes || null,
+        resolved_by: newStatus === 'resolved' || newStatus === 'dismissed' ? profile.id : selected.resolved_by,
+        resolved_at: newStatus === 'resolved' || newStatus === 'dismissed' ? new Date().toISOString() : selected.resolved_at,
+      })
+      .eq('id', selected.id);
+    setSaving(false);
+    setSelected(null);
+    fetchReports();
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Reports</h1>
-      <p className="text-cb-text-secondary">Gebruikersrapporten beheren.</p>
+
+      {/* Filter tabs */}
+      <div className="flex gap-2 mb-4">
+        {STATUS_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setFilter(opt.value)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              filter === opt.value
+                ? 'bg-cb-primary/15 text-cb-primary'
+                : 'bg-cb-surface text-cb-text-secondary hover:bg-cb-surface-light'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-cb-primary border-t-transparent" />
+        </div>
+      ) : reports.length === 0 ? (
+        <p className="text-sm text-cb-text-muted py-8 text-center">Geen reports gevonden.</p>
+      ) : (
+        <div className="bg-cb-surface border border-cb-border rounded-xl overflow-hidden">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-cb-surface-light text-cb-text-secondary text-xs uppercase">
+              <tr>
+                <th className="px-4 py-3">Reporter</th>
+                <th className="px-4 py-3">Gerapporteerd</th>
+                <th className="px-4 py-3">Reden</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Datum</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-cb-border">
+              {reports.map((r) => (
+                <tr key={r.id} className="hover:bg-cb-surface-light/50 transition-colors">
+                  <td className="px-4 py-3 text-cb-text">{r.reporter?.first_name} {r.reporter?.last_name}</td>
+                  <td className="px-4 py-3 font-medium">{r.reported?.first_name} {r.reported?.last_name}</td>
+                  <td className="px-4 py-3 text-cb-text-secondary">{REASON_LABELS[r.reason] ?? r.reason}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[r.status]}`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-cb-text-muted">{new Date(r.created_at).toLocaleDateString('nl-BE')}</td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => openDetail(r)} className="text-cb-primary hover:underline cursor-pointer text-xs">
+                      Bekijken
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Detail modal */}
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSelected(null)}>
+          <div className="bg-cb-surface border border-cb-border rounded-xl w-full max-w-lg mx-4 p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold">Report detail</h2>
+
+            {/* Users */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-cb-surface-light rounded-lg p-3">
+                <p className="text-xs text-cb-text-muted mb-1">Reporter</p>
+                <p className="text-sm font-medium">{selected.reporter?.first_name} {selected.reporter?.last_name}</p>
+                <p className="text-xs text-cb-text-muted">{selected.reporter?.city ?? 'Geen stad'}</p>
+              </div>
+              <div className="bg-cb-surface-light rounded-lg p-3">
+                <p className="text-xs text-cb-text-muted mb-1">Gerapporteerd</p>
+                <p className="text-sm font-medium">{selected.reported?.first_name} {selected.reported?.last_name}</p>
+                <p className="text-xs text-cb-text-muted">{selected.reported?.city ?? 'Geen stad'}</p>
+              </div>
+            </div>
+
+            {/* Info */}
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-cb-text-secondary">Reden</span>
+                <span>{REASON_LABELS[selected.reason]}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-cb-text-secondary">Status</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[selected.status]}`}>
+                  {selected.status}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-cb-text-secondary">Datum</span>
+                <span>{new Date(selected.created_at).toLocaleString('nl-BE')}</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            {selected.description && (
+              <div>
+                <p className="text-xs text-cb-text-muted mb-1">Beschrijving</p>
+                <p className="text-sm bg-cb-surface-light rounded-lg p-3">{selected.description}</p>
+              </div>
+            )}
+
+            {/* Admin notes */}
+            <div>
+              <label className="block text-xs text-cb-text-muted mb-1">Admin notities</label>
+              <textarea
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text placeholder:text-cb-text-muted focus:outline-none focus:ring-2 focus:ring-cb-primary/50 resize-none"
+                placeholder="Notities over deze report..."
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2">
+              {selected.status === 'pending' && (
+                <button
+                  onClick={() => updateStatus('reviewed')}
+                  disabled={saving}
+                  className="flex-1 rounded-lg bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 px-3 py-2 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Markeer als reviewed
+                </button>
+              )}
+              {selected.status !== 'resolved' && (
+                <button
+                  onClick={() => updateStatus('resolved')}
+                  disabled={saving}
+                  className="flex-1 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25 px-3 py-2 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Oplossen
+                </button>
+              )}
+              {selected.status !== 'dismissed' && (
+                <button
+                  onClick={() => updateStatus('dismissed')}
+                  disabled={saving}
+                  className="flex-1 rounded-lg bg-cb-text-muted/15 text-cb-text-muted hover:bg-cb-text-muted/25 px-3 py-2 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Afwijzen
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => setSelected(null)}
+              className="w-full text-center text-xs text-cb-text-muted hover:text-cb-text transition-colors cursor-pointer pt-1"
+            >
+              Sluiten
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
