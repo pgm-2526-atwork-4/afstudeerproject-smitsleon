@@ -20,7 +20,6 @@ const EMPTY: DbEvent = {
 export default function EventsPage() {
   const [events, setEvents] = useState<DbEvent[]>([]);
   const [venues, setVenues] = useState<DbVenue[]>([]);
-  const [selectedArtistIds, setSelectedArtistIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<DbEvent | null>(null);
@@ -51,24 +50,17 @@ export default function EventsPage() {
     setVenues((data ?? []) as DbVenue[]);
   }, []);
 
-
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
   useEffect(() => { fetchVenues(); }, [fetchVenues]);
 
   function openNew() {
     setEditing({ ...EMPTY, id: crypto.randomUUID() });
-    setSelectedArtistIds([]);
     setIsNew(true);
   }
 
-  async function openEdit(ev: DbEvent) {
+  function openEdit(ev: DbEvent) {
     setEditing({ ...ev });
     setIsNew(false);
-    const { data } = await supabaseAdmin
-      .from('event_artists')
-      .select('artist_id')
-      .eq('event_id', ev.id);
-    setSelectedArtistIds((data ?? []).map((r: { artist_id: string }) => r.artist_id));
   }
 
   async function handleSave() {
@@ -93,14 +85,6 @@ export default function EventsPage() {
       await supabaseAdmin.from('events').insert(row);
     } else {
       await supabaseAdmin.from('events').update(row).eq('id', editing.id);
-    }
-
-    // Sync event_artists: delete all existing, re-insert selected
-    await supabaseAdmin.from('event_artists').delete().eq('event_id', editing.id);
-    if (selectedArtistIds.length > 0) {
-      await supabaseAdmin.from('event_artists').insert(
-        selectedArtistIds.map((artist_id) => ({ event_id: editing.id, artist_id }))
-      );
     }
 
     setSaving(false);
@@ -243,7 +227,7 @@ export default function EventsPage() {
                   ))}
                 </select>
               </div>
-              
+
               {field('Locatienaam', 'location_name', { placeholder: 'Bijv. Sportpaleis' })}
               {field('Stad', 'city', { placeholder: 'Bijv. Antwerpen' })}
               {field('Afbeelding URL', 'image_url', { placeholder: 'https://...' })}
