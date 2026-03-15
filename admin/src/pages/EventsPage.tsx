@@ -1,4 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import FormField from '../components/FormField';
+import Modal from '../components/Modal';
+import PageHeader from '../components/PageHeader';
+import Pagination from '../components/Pagination';
+import SearchInput from '../components/SearchInput';
+import Spinner from '../components/Spinner';
 import { supabaseAdmin } from '../lib/supabase';
 import type { DbEvent, DbVenue } from '../lib/types';
 
@@ -100,41 +106,37 @@ export default function EventsPage() {
 
   function field(label: string, key: keyof DbEvent, opts?: { type?: string; placeholder?: string }) {
     return (
-      <div>
-        <label className="block text-xs text-cb-text-muted mb-1">{label}</label>
-        <input
-          type={opts?.type ?? 'text'}
-          value={(editing?.[key] as string | number | null) ?? ''}
-          onChange={(e) => setEditing((prev) => prev ? { ...prev, [key]: e.target.value || null } : prev)}
-          placeholder={opts?.placeholder}
-          className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text placeholder:text-cb-text-muted focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
-        />
-      </div>
+      <FormField
+        label={label}
+        type={opts?.type}
+        value={(editing?.[key] as string | number | null) ?? ''}
+        onChange={(v) => setEditing((prev) => prev ? { ...prev, [key]: v || null } : prev)}
+        placeholder={opts?.placeholder}
+      />
     );
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Events</h1>
-        <button onClick={openNew} className="rounded-lg bg-cb-primary hover:bg-cb-primary-dark px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer">
-          + Toevoegen
-        </button>
-      </div>
+      <PageHeader
+        title="Events"
+        action={
+          <button onClick={openNew} className="rounded-lg bg-cb-primary hover:bg-cb-primary-dark px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer">
+            + Toevoegen
+          </button>
+        }
+      />
 
-      {/* Search */}
-      <input
-        type="text"
+      <SearchInput
         value={search}
-        onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+        onChange={(v) => { setSearch(v); setPage(0); }}
         placeholder="Zoek op naam, stad of venue..."
-        className="w-full max-w-md rounded-lg bg-cb-surface border border-cb-border px-3 py-2 text-sm text-cb-text placeholder:text-cb-text-muted focus:outline-none focus:ring-2 focus:ring-cb-primary/50 mb-4"
       />
 
       {/* Table */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-cb-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : events.length === 0 ? (
         <p className="text-sm text-cb-text-muted py-8 text-center">Geen events gevonden.</p>
@@ -170,29 +172,11 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* Pagination */}
-      <div className="flex items-center gap-3 mt-4">
-        <button
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={page === 0}
-          className="rounded-lg bg-cb-surface border border-cb-border px-3 py-1.5 text-sm text-cb-text-secondary hover:bg-cb-surface-light disabled:opacity-30 cursor-pointer transition-colors"
-        >
-          ← Vorige
-        </button>
-        <span className="text-sm text-cb-text-muted">Pagina {page + 1}</span>
-        <button
-          onClick={() => setPage((p) => p + 1)}
-          disabled={events.length < PAGE_SIZE}
-          className="rounded-lg bg-cb-surface border border-cb-border px-3 py-1.5 text-sm text-cb-text-secondary hover:bg-cb-surface-light disabled:opacity-30 cursor-pointer transition-colors"
-        >
-          Volgende →
-        </button>
-      </div>
+      <Pagination page={page} pageSize={PAGE_SIZE} count={events.length} onPageChange={setPage} />
 
       {/* Edit/Create modal */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setEditing(null)}>
-          <div className="bg-cb-surface border border-cb-border rounded-xl w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setEditing(null)} maxWidth="max-w-lg">
             <h2 className="text-lg font-semibold mb-4">{isNew ? 'Event toevoegen' : 'Event bewerken'}</h2>
 
             <div className="space-y-3">
@@ -234,26 +218,20 @@ export default function EventsPage() {
               {field('Ticket URL', 'url', { placeholder: 'https://...' })}
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-cb-text-muted mb-1">Latitude</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editing.latitude ?? ''}
-                    onChange={(e) => setEditing((prev) => prev ? { ...prev, latitude: e.target.value ? parseFloat(e.target.value) : null } : prev)}
-                    className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-cb-text-muted mb-1">Longitude</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editing.longitude ?? ''}
-                    onChange={(e) => setEditing((prev) => prev ? { ...prev, longitude: e.target.value ? parseFloat(e.target.value) : null } : prev)}
-                    className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
-                  />
-                </div>
+                <FormField
+                  label="Latitude"
+                  type="number"
+                  step="any"
+                  value={editing.latitude ?? ''}
+                  onChange={(v) => setEditing((prev) => prev ? { ...prev, latitude: v ? parseFloat(v) : null } : prev)}
+                />
+                <FormField
+                  label="Longitude"
+                  type="number"
+                  step="any"
+                  value={editing.longitude ?? ''}
+                  onChange={(v) => setEditing((prev) => prev ? { ...prev, longitude: v ? parseFloat(v) : null } : prev)}
+                />
               </div>
             </div>
 
@@ -273,8 +251,7 @@ export default function EventsPage() {
                 Annuleren
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

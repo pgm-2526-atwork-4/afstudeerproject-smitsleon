@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Spinner from '../components/Spinner';
+import { REASON_LABELS, STATUS_COLORS } from '../lib/constants';
 import { supabaseAdmin } from '../lib/supabase';
 import type { DbReport, DbUser } from '../lib/types';
 
@@ -54,7 +56,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-cb-primary border-t-transparent" />
+        <Spinner />
       </div>
     );
   }
@@ -65,20 +67,7 @@ export default function DashboardPage() {
     { label: 'Openstaande reports', value: stats.pendingReports, icon: '🚩', to: '/reports' },
   ];
 
-  const REASON_LABELS: Record<string, string> = {
-    spam: 'Spam',
-    ongepast_gedrag: 'Ongepast gedrag',
-    nep_profiel: 'Nep profiel',
-    intimidatie: 'Intimidatie',
-    andere: 'Andere',
-  };
 
-  const STATUS_COLORS: Record<string, string> = {
-    pending: 'bg-yellow-500/15 text-yellow-400',
-    reviewed: 'bg-blue-500/15 text-blue-400',
-    resolved: 'bg-green-500/15 text-green-400',
-    dismissed: 'bg-cb-text-muted/15 text-cb-text-muted',
-  };
 
   return (
     <div>

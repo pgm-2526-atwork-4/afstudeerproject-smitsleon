@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Spinner from './Spinner';
 
 export default function ProtectedRoute() {
   const { session, profile, loading } = useAuth();
@@ -7,7 +8,7 @@ export default function ProtectedRoute() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cb-bg">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-cb-primary border-t-transparent" />
+        <Spinner />
       </div>
     );
   }

@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
+import Modal from '../components/Modal';
+import PageHeader from '../components/PageHeader';
+import Spinner from '../components/Spinner';
 import { useAuth } from '../contexts/AuthContext';
+import { REASON_LABELS, STATUS_COLORS } from '../lib/constants';
 import { supabaseAdmin } from '../lib/supabase';
 import type { DbReport, DbUser, ReportStatus } from '../lib/types';
 
 type ReportRow = DbReport & { reporter: DbUser; reported: DbUser };
-
-const REASON_LABELS: Record<string, string> = {
-  spam: 'Spam',
-  ongepast_gedrag: 'Ongepast gedrag',
-  nep_profiel: 'Nep profiel',
-  intimidatie: 'Intimidatie',
-  andere: 'Andere',
-};
 
 const STATUS_OPTIONS: { value: ReportStatus | 'all'; label: string }[] = [
   { value: 'all', label: 'Alle' },
@@ -20,13 +16,6 @@ const STATUS_OPTIONS: { value: ReportStatus | 'all'; label: string }[] = [
   { value: 'resolved', label: 'Resolved' },
   { value: 'dismissed', label: 'Dismissed' },
 ];
-
-const STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-yellow-500/15 text-yellow-400',
-  reviewed: 'bg-blue-500/15 text-blue-400',
-  resolved: 'bg-green-500/15 text-green-400',
-  dismissed: 'bg-cb-text-muted/15 text-cb-text-muted',
-};
 
 export default function ReportsPage() {
   const { profile } = useAuth();
@@ -83,7 +72,7 @@ export default function ReportsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Reports</h1>
+      <PageHeader title="Reports" />
 
       {/* Filter tabs */}
       <div className="flex gap-2 mb-4">
@@ -105,7 +94,7 @@ export default function ReportsPage() {
       {/* Table */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-cb-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : reports.length === 0 ? (
         <p className="text-sm text-cb-text-muted py-8 text-center">Geen reports gevonden.</p>
@@ -148,8 +137,8 @@ export default function ReportsPage() {
 
       {/* Detail modal */}
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSelected(null)}>
-          <div className="bg-cb-surface border border-cb-border rounded-xl w-full max-w-lg mx-4 p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setSelected(null)} maxWidth="max-w-lg">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold">Report detail</h2>
 
             {/* Users */}
@@ -242,7 +231,7 @@ export default function ReportsPage() {
               Sluiten
             </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

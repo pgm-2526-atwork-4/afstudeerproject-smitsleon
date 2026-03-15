@@ -1,4 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import FormField from '../components/FormField';
+import Modal from '../components/Modal';
+import PageHeader from '../components/PageHeader';
+import Pagination from '../components/Pagination';
+import SearchInput from '../components/SearchInput';
+import Spinner from '../components/Spinner';
 import { supabaseAdmin } from '../lib/supabase';
 import type { DbVenue } from '../lib/types';
 
@@ -76,26 +82,25 @@ export default function VenuesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Venues</h1>
-        <button onClick={openNew} className="rounded-lg bg-cb-primary hover:bg-cb-primary-dark px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer">
-          + Toevoegen
-        </button>
-      </div>
+      <PageHeader
+        title="Venues"
+        action={
+          <button onClick={openNew} className="rounded-lg bg-cb-primary hover:bg-cb-primary-dark px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer">
+            + Toevoegen
+          </button>
+        }
+      />
 
-      {/* Search */}
-      <input
-        type="text"
+      <SearchInput
         value={search}
-        onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+        onChange={(v) => { setSearch(v); setPage(0); }}
         placeholder="Zoek op naam of stad..."
-        className="w-full max-w-md rounded-lg bg-cb-surface border border-cb-border px-3 py-2 text-sm text-cb-text placeholder:text-cb-text-muted focus:outline-none focus:ring-2 focus:ring-cb-primary/50 mb-4"
       />
 
       {/* Table */}
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-cb-primary border-t-transparent" />
+          <Spinner />
         </div>
       ) : venues.length === 0 ? (
         <p className="text-sm text-cb-text-muted py-8 text-center">Geen venues gevonden.</p>
@@ -127,93 +132,53 @@ export default function VenuesPage() {
         </div>
       )}
 
-      {/* Pagination */}
-      <div className="flex items-center gap-3 mt-4">
-        <button
-          onClick={() => setPage((p) => Math.max(0, p - 1))}
-          disabled={page === 0}
-          className="rounded-lg bg-cb-surface border border-cb-border px-3 py-1.5 text-sm text-cb-text-secondary hover:bg-cb-surface-light disabled:opacity-30 cursor-pointer transition-colors"
-        >
-          ← Vorige
-        </button>
-        <span className="text-sm text-cb-text-muted">Pagina {page + 1}</span>
-        <button
-          onClick={() => setPage((p) => p + 1)}
-          disabled={venues.length < PAGE_SIZE}
-          className="rounded-lg bg-cb-surface border border-cb-border px-3 py-1.5 text-sm text-cb-text-secondary hover:bg-cb-surface-light disabled:opacity-30 cursor-pointer transition-colors"
-        >
-          Volgende →
-        </button>
-      </div>
+      <Pagination page={page} pageSize={PAGE_SIZE} count={venues.length} onPageChange={setPage} />
 
       {/* Edit/Create modal */}
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setEditing(null)}>
-          <div className="bg-cb-surface border border-cb-border rounded-xl w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setEditing(null)}>
             <h2 className="text-lg font-semibold mb-4">{isNew ? 'Venue toevoegen' : 'Venue bewerken'}</h2>
 
             <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-cb-text-muted mb-1">Naam *</label>
-                <input
-                  type="text"
-                  value={editing.name}
-                  onChange={(e) => setEditing((prev) => prev ? { ...prev, name: e.target.value } : prev)}
-                  placeholder="Venuenaam"
-                  className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text placeholder:text-cb-text-muted focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-cb-text-muted mb-1">Stad</label>
-                <input
-                  type="text"
-                  value={editing.city ?? ''}
-                  onChange={(e) => setEditing((prev) => prev ? { ...prev, city: e.target.value || null } : prev)}
-                  placeholder="Bijv. Antwerpen"
-                  className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text placeholder:text-cb-text-muted focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-cb-text-muted mb-1">Adres</label>
-                <input
-                  type="text"
-                  value={editing.address ?? ''}
-                  onChange={(e) => setEditing((prev) => prev ? { ...prev, address: e.target.value || null } : prev)}
-                  placeholder="Straat en nummer"
-                  className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text placeholder:text-cb-text-muted focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-cb-text-muted mb-1">Afbeelding URL</label>
-                <input
-                  type="text"
-                  value={editing.image_url ?? ''}
-                  onChange={(e) => setEditing((prev) => prev ? { ...prev, image_url: e.target.value || null } : prev)}
-                  placeholder="https://..."
-                  className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text placeholder:text-cb-text-muted focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
-                />
-              </div>
+              <FormField
+                label="Naam *"
+                value={editing.name}
+                onChange={(v) => setEditing((prev) => prev ? { ...prev, name: v } : prev)}
+                placeholder="Venuenaam"
+              />
+              <FormField
+                label="Stad"
+                value={editing.city ?? ''}
+                onChange={(v) => setEditing((prev) => prev ? { ...prev, city: v || null } : prev)}
+                placeholder="Bijv. Antwerpen"
+              />
+              <FormField
+                label="Adres"
+                value={editing.address ?? ''}
+                onChange={(v) => setEditing((prev) => prev ? { ...prev, address: v || null } : prev)}
+                placeholder="Straat en nummer"
+              />
+              <FormField
+                label="Afbeelding URL"
+                value={editing.image_url ?? ''}
+                onChange={(v) => setEditing((prev) => prev ? { ...prev, image_url: v || null } : prev)}
+                placeholder="https://..."
+              />
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-cb-text-muted mb-1">Latitude</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editing.latitude ?? ''}
-                    onChange={(e) => setEditing((prev) => prev ? { ...prev, latitude: e.target.value ? parseFloat(e.target.value) : null } : prev)}
-                    className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-cb-text-muted mb-1">Longitude</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={editing.longitude ?? ''}
-                    onChange={(e) => setEditing((prev) => prev ? { ...prev, longitude: e.target.value ? parseFloat(e.target.value) : null } : prev)}
-                    className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
-                  />
-                </div>
+                <FormField
+                  label="Latitude"
+                  type="number"
+                  step="any"
+                  value={editing.latitude ?? ''}
+                  onChange={(v) => setEditing((prev) => prev ? { ...prev, latitude: v ? parseFloat(v) : null } : prev)}
+                />
+                <FormField
+                  label="Longitude"
+                  type="number"
+                  step="any"
+                  value={editing.longitude ?? ''}
+                  onChange={(v) => setEditing((prev) => prev ? { ...prev, longitude: v ? parseFloat(v) : null } : prev)}
+                />
               </div>
             </div>
 
@@ -233,8 +198,7 @@ export default function VenuesPage() {
                 Annuleren
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
