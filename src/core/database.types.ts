@@ -16,6 +16,7 @@ export interface DbUser {
   longitude: number | null;
   share_location: boolean;
   vibe_tags: string[];
+  role: 'user' | 'admin';
   created_at: string;
 }
 
@@ -140,6 +141,22 @@ export interface DbFavouriteVenue {
   user_id: string;
   venue_id: string;
   created_at: string;
+}
+
+export type ReportReason = 'spam' | 'ongepast_gedrag' | 'nep_profiel' | 'intimidatie' | 'andere';
+export type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed';
+
+export interface DbReport {
+  id: string;
+  reporter_id: string;
+  reported_user_id: string;
+  reason: ReportReason;
+  description: string | null;
+  status: ReportStatus;
+  admin_notes: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  resolved_at: string | null;
 }
 
 // ── Joined query result helpers ────────────────────────

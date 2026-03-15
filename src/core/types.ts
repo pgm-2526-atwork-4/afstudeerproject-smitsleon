@@ -74,6 +74,7 @@ export interface UserProfile {
   longitude: number | null;
   share_location: boolean;
   vibe_tags: string[];
+  role: 'user' | 'admin';
   created_at: string;
 }
 
