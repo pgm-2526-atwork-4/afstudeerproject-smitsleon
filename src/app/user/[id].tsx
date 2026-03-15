@@ -20,11 +20,20 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
 
 type BuddyStatus = 'none' | 'pending_incoming' | 'pending_outgoing' | 'buddies';
+
+const REPORT_REASONS = [
+  { value: 'spam', label: 'Spam' },
+  { value: 'ongepast_gedrag', label: 'Ongepast gedrag' },
+  { value: 'nep_profiel', label: 'Nep profiel' },
+  { value: 'intimidatie', label: 'Intimidatie' },
+  { value: 'andere', label: 'Andere' },
+];
 
 export default function UserProfileScreen() {
   const router = useRouter();
@@ -42,6 +51,10 @@ export default function UserProfileScreen() {
   const [favouriteArtists, setFavouriteArtists] = useState<ArtistChip[]>([]);
   const [favouriteVenues, setFavouriteVenues] = useState<VenueChip[]>([]);
   const [showBuddyMenu, setShowBuddyMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportSending, setReportSending] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!id) return;
@@ -193,6 +206,23 @@ export default function UserProfileScreen() {
     setSending(false);
   }
 
+  async function handleReport() {
+    if (!currentUser || !id || !reportReason) return;
+    setReportSending(true);
+    const { error } = await supabase.from('reports').insert({
+      reporter_id: currentUser.id,
+      reported_user_id: id,
+      reason: reportReason,
+      description: reportDescription.trim() || null,
+    });
+    setReportSending(false);
+    setShowReportModal(false);
+    setReportReason('');
+    setReportDescription('');
+    if (error) Alert.alert('Fout', 'Kon melding niet versturen.');
+    else Alert.alert('Bedankt', 'Je melding is verstuurd en wordt bekeken door ons team.');
+  }
+
   function handleRemoveBuddy() {
     if (!currentUser || !id) return;
     setShowBuddyMenu(false);
@@ -230,7 +260,7 @@ export default function UserProfileScreen() {
   if (!currentUser) {
     return (
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={[styles.backBtn, { marginTop: 50, marginLeft: Spacing.xl }]} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <EmptyState icon="lock-closed-outline" title="Niet beschikbaar" subtitle="Log in om profielen te bekijken." />
@@ -242,7 +272,7 @@ export default function UserProfileScreen() {
   if (!profile) {
     return (
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={[styles.backBtn, { marginTop: 50, marginLeft: Spacing.xl }]} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={Colors.text} />
         </TouchableOpacity>
         <EmptyState icon="person-outline" title="Gebruiker niet gevonden" />
@@ -256,10 +286,17 @@ export default function UserProfileScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Back */}
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
-        </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color={Colors.text} />
+          </TouchableOpacity>
+          {!isOwnProfile && (
+            <TouchableOpacity style={styles.reportBtn} onPress={() => setShowReportModal(true)}>
+              <Ionicons name="flag-outline" size={22} color={Colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Avatar */}
         <View style={styles.avatarWrapper}>
@@ -437,6 +474,45 @@ export default function UserProfileScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Report modal */}
+      <Modal visible={showReportModal} transparent animationType="fade" onRequestClose={() => setShowReportModal(false)}>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowReportModal(false)}>
+          <View style={styles.reportModal} onStartShouldSetResponder={() => true}>
+            <Text style={styles.reportTitle}>Gebruiker rapporteren</Text>
+            <Text style={styles.reportSubtitle}>Waarom wil je deze gebruiker melden?</Text>
+            {REPORT_REASONS.map((r) => (
+              <TouchableOpacity
+                key={r.value}
+                style={[styles.reasonOption, reportReason === r.value && styles.reasonSelected]}
+                onPress={() => setReportReason(r.value)}
+              >
+                <Text style={[styles.reasonText, reportReason === r.value && styles.reasonTextSelected]}>{r.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TextInput
+              style={styles.reportInput}
+              placeholder="Extra toelichting (optioneel)"
+              placeholderTextColor={Colors.textMuted}
+              value={reportDescription}
+              onChangeText={setReportDescription}
+              multiline
+              maxLength={500}
+            />
+            <TouchableOpacity
+              style={[styles.reportSubmitBtn, !reportReason && styles.reportSubmitDisabled]}
+              onPress={handleReport}
+              disabled={!reportReason || reportSending}
+            >
+              {reportSending ? (
+                <ActivityIndicator size="small" color={Colors.text} />
+              ) : (
+                <Text style={styles.reportSubmitText}>Versturen</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -445,9 +521,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scroll: { paddingHorizontal: Spacing.xl, paddingBottom: 40 },
   backBtn: {
-    marginTop: 50,
-    marginBottom: Spacing.md,
-    alignSelf: 'flex-start',
     padding: Spacing.xs,
   },
   avatarWrapper: { alignItems: 'center', marginBottom: Spacing.md },
@@ -517,4 +590,21 @@ const styles = StyleSheet.create({
   },
   menuOption: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.md, borderRadius: Radius.sm },
   dangerText: { color: Colors.error, fontSize: FontSizes.md, fontWeight: '600' },
+
+  // Header
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 50, marginBottom: Spacing.md },
+  reportBtn: { padding: Spacing.xs },
+
+  // Report modal
+  reportModal: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.xl, width: '85%', borderWidth: 1, borderColor: Colors.border },
+  reportTitle: { color: Colors.text, fontSize: FontSizes.lg, fontWeight: 'bold', marginBottom: Spacing.xs },
+  reportSubtitle: { color: Colors.textSecondary, fontSize: FontSizes.sm, marginBottom: Spacing.md },
+  reasonOption: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.xs },
+  reasonSelected: { borderColor: Colors.primary, backgroundColor: 'rgba(29, 185, 84, 0.15)' },
+  reasonText: { color: Colors.textSecondary, fontSize: FontSizes.sm },
+  reasonTextSelected: { color: Colors.primary, fontWeight: '600' },
+  reportInput: { color: Colors.text, fontSize: FontSizes.sm, backgroundColor: Colors.background, borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginTop: Spacing.md, minHeight: 80, textAlignVertical: 'top' },
+  reportSubmitBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.md },
+  reportSubmitDisabled: { opacity: 0.4 },
+  reportSubmitText: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
 });
