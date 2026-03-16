@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userData?.blocked_at) {
       await supabase.auth.signOut();
       signingInRef.current = false;
-      return { error: 'Je account is geblokkeerd. Neem contact op met de beheerder.' };
+      return { error: 'Je account is geblokkeerd. Je kunt dit account niet meer gebruiken' };
     }
 
     // Not blocked — let the session through
