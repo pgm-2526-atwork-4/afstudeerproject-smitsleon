@@ -6,7 +6,7 @@ import Pagination from '../components/Pagination';
 import SearchInput from '../components/SearchInput';
 import Spinner from '../components/Spinner';
 import { supabaseAdmin } from '../lib/supabase';
-import type { DbEvent, DbVenue } from '../lib/types';
+import type { DbArtist, DbEvent, DbVenue } from '../lib/types';
 
 const EMPTY: DbEvent = {
   id: '',
@@ -26,6 +26,9 @@ const EMPTY: DbEvent = {
 export default function EventsPage() {
   const [events, setEvents] = useState<DbEvent[]>([]);
   const [venues, setVenues] = useState<DbVenue[]>([]);
+  const [artists, setArtists] = useState<DbArtist[]>([]);
+  const [selectedArtistIds, setSelectedArtistIds] = useState<Set<string>>(new Set());
+  const [artistSearch, setArtistSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<DbEvent | null>(null);
@@ -56,17 +59,32 @@ export default function EventsPage() {
     setVenues((data ?? []) as DbVenue[]);
   }, []);
 
+  const fetchArtists = useCallback(async () => {
+    const { data } = await supabaseAdmin.from('artists').select('*').order('name');
+    setArtists((data ?? []) as DbArtist[]);
+  }, []);
+
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
   useEffect(() => { fetchVenues(); }, [fetchVenues]);
+  useEffect(() => { fetchArtists(); }, [fetchArtists]);
 
   function openNew() {
     setEditing({ ...EMPTY, id: crypto.randomUUID() });
+    setSelectedArtistIds(new Set());
+    setArtistSearch('');
     setIsNew(true);
   }
 
-  function openEdit(ev: DbEvent) {
+  async function openEdit(ev: DbEvent) {
     setEditing({ ...ev });
+    setArtistSearch('');
     setIsNew(false);
+    // Load linked artists
+    const { data } = await supabaseAdmin
+      .from('event_artists')
+      .select('artist_id')
+      .eq('event_id', ev.id);
+    setSelectedArtistIds(new Set((data ?? []).map((r: { artist_id: string }) => r.artist_id)));
   }
 
   async function handleSave() {
@@ -91,6 +109,14 @@ export default function EventsPage() {
       await supabaseAdmin.from('events').insert(row);
     } else {
       await supabaseAdmin.from('events').update(row).eq('id', editing.id);
+    }
+
+    // Sync event_artists: delete old, insert new
+    await supabaseAdmin.from('event_artists').delete().eq('event_id', editing.id);
+    if (selectedArtistIds.size > 0) {
+      await supabaseAdmin.from('event_artists').insert(
+        [...selectedArtistIds].map((artist_id) => ({ event_id: editing.id, artist_id }))
+      );
     }
 
     setSaving(false);
@@ -232,6 +258,52 @@ export default function EventsPage() {
                   value={editing.longitude ?? ''}
                   onChange={(v) => setEditing((prev) => prev ? { ...prev, longitude: v ? parseFloat(v) : null } : prev)}
                 />
+              </div>
+
+              {/* Artiesten */}
+              <div>
+                <label className="block text-xs text-cb-text-muted mb-1">Artiesten</label>
+                {selectedArtistIds.size > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {[...selectedArtistIds].map((aid) => {
+                      const a = artists.find((x) => x.id === aid);
+                      return (
+                        <span key={aid} className="inline-flex items-center gap-1 rounded-full bg-cb-primary/15 border border-cb-primary/30 px-2.5 py-1 text-xs text-cb-primary">
+                          {a?.name ?? aid}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedArtistIds((prev) => { const n = new Set(prev); n.delete(aid); return n; })}
+                            className="hover:text-cb-error cursor-pointer"
+                          >×</button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                <input
+                  type="text"
+                  value={artistSearch}
+                  onChange={(e) => setArtistSearch(e.target.value)}
+                  placeholder="Zoek artiest..."
+                  className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text placeholder:text-cb-text-muted focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
+                />
+                {artistSearch.trim() && (
+                  <div className="mt-1 max-h-32 overflow-y-auto rounded-lg bg-cb-surface-light border border-cb-border">
+                    {artists
+                      .filter((a) => !selectedArtistIds.has(a.id) && a.name.toLowerCase().includes(artistSearch.toLowerCase()))
+                      .slice(0, 8)
+                      .map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => { setSelectedArtistIds((prev) => new Set(prev).add(a.id)); setArtistSearch(''); }}
+                          className="w-full text-left px-3 py-1.5 text-sm text-cb-text hover:bg-cb-surface cursor-pointer"
+                        >
+                          {a.name} {a.genre ? <span className="text-cb-text-muted">({a.genre})</span> : null}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
 

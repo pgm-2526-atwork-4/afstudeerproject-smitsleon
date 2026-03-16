@@ -143,6 +143,11 @@ export interface DbFavouriteVenue {
   created_at: string;
 }
 
+export interface DbEventArtist {
+  event_id: string;
+  artist_id: string;
+}
+
 export type ReportReason = 'spam' | 'ongepast_gedrag' | 'nep_profiel' | 'intimidatie' | 'andere';
 export type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed';
 

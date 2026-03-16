@@ -174,12 +174,22 @@ function toEventRow(tm: TmEvent) {
   };
 }
 
-async function upsertBatched(table: string, rows: Record<string, unknown>[]) {
+function extractEventArtists(tmEvents: TmEvent[]) {
+  const links: { event_id: string; artist_id: string }[] = [];
+  for (const ev of tmEvents) {
+    for (const a of ev._embedded?.attractions ?? []) {
+      if (a.id) links.push({ event_id: ev.id, artist_id: a.id });
+    }
+  }
+  return links;
+}
+
+async function upsertBatched(table: string, rows: Record<string, unknown>[], onConflict = 'id') {
   const batchSize = 500;
   let ok = 0;
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
-    const { error } = await supabase.from(table).upsert(batch, { onConflict: 'id' });
+    const { error } = await supabase.from(table).upsert(batch, { onConflict });
     if (error) {
       console.error(`   ❌  ${table} batch ${Math.floor(i / batchSize) + 1}: ${error.message}`);
     } else {
@@ -219,6 +229,11 @@ async function main() {
   const eventRows = tmEvents.map(toEventRow);
   const eventsOk = await upsertBatched('events', eventRows);
   console.log(`✅  ${eventsOk}/${eventRows.length} events ge-upsert`);
+
+  // 5. Upsert event ↔ artist koppelingen
+  const eventArtistRows = extractEventArtists(tmEvents);
+  const eaOk = await upsertBatched('event_artists', eventArtistRows, 'event_id,artist_id');
+  console.log(`✅  ${eaOk}/${eventArtistRows.length} event-artist koppelingen ge-upsert`);
 
   console.log('\n🎉  Sync voltooid!');
 }

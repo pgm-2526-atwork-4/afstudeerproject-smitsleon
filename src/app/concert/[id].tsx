@@ -7,17 +7,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Linking,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function ConcertDetailScreen() {
@@ -38,15 +38,27 @@ export default function ConcertDetailScreen() {
   const MAX_MEMBERS = 50;
   const [creating, setCreating] = useState(false);
   const [concertStatus, setConcertStatus] = useState<'interested' | 'going' | null>(null);
+  const [lineupArtists, setLineupArtists] = useState<{ id: string; name: string; image_url: string | null; genre: string | null }[]>([]);
 
   // Fetch event data from Supabase
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoadingEvent(true);
-      const { data } = await supabase.from('events').select('*').eq('id', id).maybeSingle();
+      const [eventRes, artistsRes] = await Promise.all([
+        supabase.from('events').select('*').eq('id', id).maybeSingle(),
+        supabase.from('event_artists').select('artist_id, artists(id, name, image_url, genre)').eq('event_id', id),
+      ]);
       if (!cancelled) {
-        setEvent(data ? dbRowToEvent(data) : null);
+        setEvent(eventRes.data ? dbRowToEvent(eventRes.data) : null);
+        setLineupArtists(
+          (artistsRes.data ?? []).map((r: any) => ({
+            id: r.artists.id,
+            name: r.artists.name,
+            image_url: r.artists.image_url,
+            genre: r.artists.genre,
+          }))
+        );
         setLoadingEvent(false);
       }
     })();
@@ -250,7 +262,23 @@ export default function ConcertDetailScreen() {
 
         {/* Event info */}
         <View style={styles.infoSection}>
-          <Text style={styles.tourName}>{event?.name}</Text>
+          {lineupArtists.length > 0 ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="musical-notes-outline" size={18} color={Colors.primary} />
+              <View style={styles.artistList}>
+                {lineupArtists.map((artist, i) => (
+                  <TouchableOpacity
+                    key={artist.id}
+                    onPress={() => router.push({ pathname: '/artist/[id]', params: { id: artist.id, name: artist.name, imageUrl: artist.image_url ?? '', genre: artist.genre ?? '' } })}
+                  >
+                    <Text style={styles.artistLink}>
+                      {artist.name}{i < lineupArtists.length - 1 ? ', ' : ''}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ) : null}
 
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={18} color={Colors.primary} />
@@ -485,6 +513,16 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: FontSizes.md,
     marginBottom: Spacing.xs,
+  },
+  artistList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  artistLink: {
+    color: Colors.primary,
+    fontSize: FontSizes.md,
+    textDecorationLine: 'underline',
   },
   infoRow: {
     flexDirection: 'row',
