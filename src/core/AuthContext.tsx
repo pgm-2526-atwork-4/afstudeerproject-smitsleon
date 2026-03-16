@@ -1,5 +1,5 @@
 import { Session, User } from '@supabase/supabase-js';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import { UserProfile } from './types';
 
@@ -20,6 +20,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  // Ref so the onAuthStateChange closure always reads the latest value
+  const signingInRef = useRef(false);
 
   useEffect(() => {
     // Get initial session
@@ -35,6 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        // Skip if signIn is still checking blocked status
+        if (signingInRef.current) return;
         setSession(session);
         if (session?.user) {
           await fetchProfile(session.user.id);
@@ -55,13 +59,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', userId)
       .single();
 
-    setProfile(data as UserProfile | null);
+    const p = data as UserProfile | null;
+    if (p?.blocked_at) {
+      await supabase.auth.signOut();
+      setSession(null);
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+    setProfile(p);
     setLoading(false);
   }
 
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    signingInRef.current = true;
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      signingInRef.current = false;
+      return { error: error.message };
+    }
+
+    // Check if this account is blocked before the session propagates
+    const { data: userData } = await supabase
+      .from('users')
+      .select('blocked_at')
+      .eq('id', data.user.id)
+      .single();
+
+    if (userData?.blocked_at) {
+      await supabase.auth.signOut();
+      signingInRef.current = false;
+      return { error: 'Je account is geblokkeerd. Neem contact op met de beheerder.' };
+    }
+
+    // Not blocked — let the session through
+    signingInRef.current = false;
+    setSession(data.session);
+    await fetchProfile(data.user.id);
+    return { error: null };
   }
 
   async function signUp(email: string, password: string) {

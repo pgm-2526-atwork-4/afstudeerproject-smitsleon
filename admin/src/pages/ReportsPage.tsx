@@ -25,6 +25,7 @@ export default function ReportsPage() {
   const [selected, setSelected] = useState<ReportRow | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [reportedEmail, setReportedEmail] = useState<string | null>(null);
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -48,9 +49,26 @@ export default function ReportsPage() {
 
   useEffect(() => { fetchReports(); }, [fetchReports]);
 
-  function openDetail(report: ReportRow) {
+  async function openDetail(report: ReportRow) {
     setSelected(report);
     setAdminNotes(report.admin_notes ?? '');
+    setReportedEmail(null);
+    // Fetch email from auth.users via the admin API
+    const { data } = await supabaseAdmin.auth.admin.getUserById(report.reported_user_id);
+    setReportedEmail(data?.user?.email ?? null);
+  }
+
+  async function toggleBlock() {
+    if (!selected) return;
+    setSaving(true);
+    const isBlocked = !!selected.reported?.blocked_at;
+    await supabaseAdmin
+      .from('users')
+      .update({ blocked_at: isBlocked ? null : new Date().toISOString() })
+      .eq('id', selected.reported_user_id);
+    setSaving(false);
+    setSelected(null);
+    fetchReports();
   }
 
   async function updateStatus(newStatus: ReportStatus) {
@@ -115,7 +133,12 @@ export default function ReportsPage() {
               {reports.map((r) => (
                 <tr key={r.id} className="hover:bg-cb-surface-light/50 transition-colors">
                   <td className="px-4 py-3 text-cb-text">{r.reporter?.first_name} {r.reporter?.last_name}</td>
-                  <td className="px-4 py-3 font-medium">{r.reported?.first_name} {r.reported?.last_name}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {r.reported?.first_name} {r.reported?.last_name}
+                    {r.reported?.blocked_at && (
+                      <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/15 text-red-400">BLOCKED</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-cb-text-secondary">{REASON_LABELS[r.reason] ?? r.reason}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[r.status]}`}>
@@ -150,7 +173,13 @@ export default function ReportsPage() {
               </div>
               <div className="bg-cb-surface-light rounded-lg p-3">
                 <p className="text-xs text-cb-text-muted mb-1">Gerapporteerd</p>
-                <p className="text-sm font-medium">{selected.reported?.first_name} {selected.reported?.last_name}</p>
+                <p className="text-sm font-medium">
+                  {selected.reported?.first_name} {selected.reported?.last_name}
+                  {selected.reported?.blocked_at && (
+                    <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/15 text-red-400">BLOCKED</span>
+                  )}
+                </p>
+                <p className="text-xs text-cb-text-muted">{reportedEmail ?? '...'}</p>
                 <p className="text-xs text-cb-text-muted">{selected.reported?.city ?? 'Geen stad'}</p>
               </div>
             </div>
@@ -193,7 +222,7 @@ export default function ReportsPage() {
               />
             </div>
 
-            {/* Actions */}
+            {/* Report actions */}
             <div className="flex gap-2 pt-2">
               {selected.status === 'pending' && (
                 <button
@@ -222,6 +251,22 @@ export default function ReportsPage() {
                   Afwijzen
                 </button>
               )}
+            </div>
+
+            {/* Block / unblock user */}
+            <div className="border-t border-cb-border pt-3">
+              <p className="text-xs text-cb-text-muted mb-2">Account acties</p>
+              <button
+                onClick={toggleBlock}
+                disabled={saving}
+                className={`w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
+                  selected.reported?.blocked_at
+                    ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
+                    : 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
+                }`}
+              >
+                {selected.reported?.blocked_at ? 'Gebruiker deblokkeren' : 'Gebruiker blokkeren'}
+              </button>
             </div>
 
             <button

@@ -17,6 +17,7 @@ export interface DbUser {
   share_location: boolean;
   vibe_tags: string[];
   role: 'user' | 'admin';
+  blocked_at: string | null;
   created_at: string;
 }
 
