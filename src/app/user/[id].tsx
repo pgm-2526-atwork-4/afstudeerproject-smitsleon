@@ -220,7 +220,7 @@ export default function UserProfileScreen() {
     setReportReason('');
     setReportDescription('');
     if (error) Alert.alert('Fout', 'Kon melding niet versturen.');
-    else Alert.alert('Bedankt', 'Je melding is verstuurd en wordt bekeken door ons team.');
+    else Alert.alert('Bedankt', 'Je melding is verstuurd en wordt door ons bekeken.');
   }
 
   function handleRemoveBuddy() {
