@@ -19,7 +19,10 @@ export default function AdminLayout() {
       <aside className="w-64 shrink-0 bg-cb-surface border-r border-cb-border flex flex-col">
         {/* Logo */}
         <div className="px-6 py-5 border-b border-cb-border">
-          <h1 className="text-lg font-bold text-cb-primary">🎶 Concert Buddy</h1>
+          <h1 className="text-lg font-bold text-cb-primary flex items-center gap-2">
+            <img src="/logo-green.svg" alt="Logo" className="h-6 w-6" />
+            Concert Buddy
+          </h1>
           <p className="text-xs text-cb-text-muted mt-1">Admin Panel</p>
         </div>
 

@@ -30,7 +30,8 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-cb-primary mb-1">🎶 Concert Buddy</h1>
+          <img src="/logo-green.svg" alt="Logo" className="h-16 w-16 mx-auto mb-3" />
+          <h1 className="text-2xl font-bold text-white mb-1">Concert Buddy</h1>
           <p className="text-cb-text-secondary text-sm">Admin Panel</p>
         </div>
 
