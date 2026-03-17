@@ -1,11 +1,11 @@
 import { Session, User } from '@supabase/supabase-js';
 import {
-    createContext,
-    ReactNode,
-    useCallback,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
 } from 'react';
 import { supabase, supabaseAdmin } from '../lib/supabase';
 import type { DbUser } from '../lib/types';
@@ -81,9 +81,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
-    setSession(null);
-    setProfile(null);
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } finally {
+      setSession(null);
+      setProfile(null);
+    }
   }
 
   return (

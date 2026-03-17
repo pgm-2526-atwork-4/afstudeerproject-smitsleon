@@ -11,4 +11,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
  * Admin client — uses service role key, bypasses RLS.
  * Only use this for admin-specific operations (CRUD on events, users, etc.)
  */
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
