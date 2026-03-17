@@ -123,9 +123,9 @@ export function useHomeSections() {
       return (rows ?? []).map(dbRowToEvent);
     })();
 
-    // 4. Nearby events
+    // 4. Nearby events (show when user has coordinates, regardless of share_location)
     const nearbyPromise = (async (): Promise<Event[]> => {
-      if (!profile?.share_location || !profile.latitude || !profile.longitude) return [];
+      if (!profile?.latitude || !profile.longitude) return [];
       const latDelta = NEARBY_RADIUS_KM / 111;
       const lngDelta = NEARBY_RADIUS_KM / (111 * Math.cos((profile.latitude * Math.PI) / 180));
 
