@@ -78,6 +78,7 @@ export default function HomeScreen() {
   }, [user]);
 
   useFocusEffect(
+     
     useCallback(() => {
       fetchUnreadCount();
       sections.load();
@@ -183,6 +184,7 @@ export default function HomeScreen() {
       setIsSearchActive(false);
       sections.load();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, filters, searchMode, searchPeople]);
 
   const applyFilters = (newFilters: FilterState) => {
@@ -241,7 +243,10 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Concert Buddy</Text>
+        <View style={styles.titleRow}>
+          <Image source={require('../../../assets/logo/logo-green.png')} style={styles.headerLogo} />
+          <Text style={styles.title}>Concert Buddy</Text>
+        </View>
         {user ? (
         <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')}>
           <Ionicons name="notifications-outline" size={24} color={Colors.text} />
@@ -522,9 +527,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  headerLogo: { width: 28, height: 28, resizeMode: 'contain' },
   title: { color: Colors.text, fontSize: FontSizes.xxl, fontWeight: 'bold' },
   notificationButton: { position: 'relative', padding: Spacing.xs },
   badge: {
