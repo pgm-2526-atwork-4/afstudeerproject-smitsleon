@@ -1,9 +1,10 @@
 import { ConcertCard } from '@/components/design/ConcertCard';
 import { ConcertSection } from '@/components/design/ConcertSection';
 import { FilterModal } from '@/components/design/FilterModal';
+import { PersonCard } from '@/components/design/PersonCard';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
-import { Artist, Event, FilterState, Venue } from '@/core/types';
+import { Artist, Event, FilterState, Venue, calculateAge } from '@/core/types';
 import { useConcerts } from '@/core/useConcerts';
 import { useHomeSections } from '@/core/useHomeSections';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -24,6 +25,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+type SearchMode = 'concerts' | 'people';
+
+interface PersonResult {
+  id: string;
+  first_name: string;
+  last_name: string;
+  avatar_url: string | null;
+  birth_date: string | null;
+  city: string | null;
+  bio: string | null;
+  favourite_artists: string[];
+}
+
 export default function HomeScreen() {
   const { events, groupCounts, loading: searchLoading, error, searchConcerts } = useConcerts();
   const sections = useHomeSections();
@@ -34,6 +48,9 @@ export default function HomeScreen() {
   const [venueResults, setVenueResults] = useState<Venue[]>([]);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [searchMode, setSearchMode] = useState<SearchMode>('concerts');
+  const [peopleResults, setPeopleResults] = useState<PersonResult[]>([]);
+  const [peopleLoading, setPeopleLoading] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     groupsOnly: false,
     minGroupSize: '',
@@ -67,8 +84,62 @@ export default function HomeScreen() {
     }, [fetchUnreadCount, sections.load])
   );
 
+  const searchPeople = useCallback(async (q: string) => {
+    if (!q) {
+      setPeopleResults([]);
+      setIsSearchActive(false);
+      return;
+    }
+
+    setPeopleLoading(true);
+    setIsSearchActive(true);
+
+    const pattern = `%${q}%`;
+    const { data: users } = await supabase
+      .from('users')
+      .select('id, first_name, last_name, avatar_url, birth_date, city, bio')
+      .is('blocked_at', null)
+      .or(`first_name.ilike.${pattern},last_name.ilike.${pattern}`)
+      .limit(20);
+
+    if (!users || users.length === 0) {
+      setPeopleResults([]);
+      setPeopleLoading(false);
+      return;
+    }
+
+    const ids = users.map((u) => u.id);
+    const { data: favs } = await supabase
+      .from('favourite_artists')
+      .select('user_id, artists(name)')
+      .in('user_id', ids);
+
+    const artistMap = new Map<string, string[]>();
+    (favs ?? []).forEach((row: any) => {
+      const list = artistMap.get(row.user_id) ?? [];
+      list.push(row.artists.name);
+      artistMap.set(row.user_id, list);
+    });
+
+    setPeopleResults(
+      users
+        .filter((u) => u.id !== user?.id)
+        .map((u) => ({
+          ...u,
+          favourite_artists: artistMap.get(u.id) ?? [],
+        })),
+    );
+    setPeopleLoading(false);
+  }, [user]);
+
   const handleSearch = useCallback(() => {
     const q = query.trim();
+
+    if (searchMode === 'people') {
+      searchPeople(q);
+      return;
+    }
+
     const hasActiveFilters = filters.groupsOnly || filters.startDate || filters.endDate;
     
     if (q || hasActiveFilters) {
@@ -112,7 +183,7 @@ export default function HomeScreen() {
       setIsSearchActive(false);
       sections.load();
     }
-  }, [query, filters]);
+  }, [query, filters, searchMode, searchPeople]);
 
   const applyFilters = (newFilters: FilterState) => {
     setFilters(newFilters);
@@ -148,8 +219,19 @@ export default function HomeScreen() {
     setFilters({ groupsOnly: false, minGroupSize: '', maxGroupSize: '', startDate: null, endDate: null });
     setArtistResults([]);
     setVenueResults([]);
+    setPeopleResults([]);
     setIsSearchActive(false);
   }, []);
+
+  const switchMode = useCallback((mode: SearchMode) => {
+    if (mode === searchMode) return;
+    setSearchMode(mode);
+    setIsSearchActive(false);
+    setArtistResults([]);
+    setVenueResults([]);
+    setPeopleResults([]);
+    setQuery('');
+  }, [searchMode]);
 
   function navigateToEvent(event: Event) {
     router.push({ pathname: '/concert/[id]', params: { id: event.id } });
@@ -176,13 +258,29 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* Search mode tabs */}
+      <View style={styles.tabRow}>
+        <TouchableOpacity
+          style={[styles.tab, searchMode === 'concerts' && styles.tabActive]}
+          onPress={() => switchMode('concerts')}
+        >
+          <Text style={[styles.tabText, searchMode === 'concerts' && styles.tabTextActive]}>Concerten</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, searchMode === 'people' && styles.tabActive]}
+          onPress={() => switchMode('people')}
+        >
+          <Text style={[styles.tabText, searchMode === 'people' && styles.tabTextActive]}>Mensen</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Search bar */}
       <View style={styles.searchRow}>
         <View style={styles.searchInputWrapper}>
           <Ionicons name="search" size={18} color={Colors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Zoek artiest, event, venue of stad..."
+            placeholder={searchMode === 'people' ? 'Zoek gebruikers op naam...' : 'Zoek artiest, event, venue of stad...'}
             placeholderTextColor={Colors.textMuted}
             value={query}
             onChangeText={setQuery}
@@ -194,12 +292,14 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterVisible(!isFilterVisible)}>
-          <Ionicons name="options-outline" size={24} color={Colors.text} />
-          {(filters.groupsOnly || filters.startDate || filters.endDate) && (
-            <View style={styles.filterBadge} />
-          )}
-        </TouchableOpacity>
+        {searchMode === 'concerts' && (
+          <TouchableOpacity style={styles.filterButton} onPress={() => setIsFilterVisible(!isFilterVisible)}>
+            <Ionicons name="options-outline" size={24} color={Colors.text} />
+            {(filters.groupsOnly || filters.startDate || filters.endDate) && (
+              <View style={styles.filterBadge} />
+            )}
+          </TouchableOpacity>
+        )}
       </View>
       
       <FilterModal 
@@ -209,7 +309,44 @@ export default function HomeScreen() {
         onApply={applyFilters}
       />
 
-      {isSearchActive ? (
+      {searchMode === 'people' ? (
+        /* ========== PEOPLE SEARCH MODE ========== */
+        peopleLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Mensen zoeken...</Text>
+          </View>
+        ) : isSearchActive ? (
+          <FlatList
+            data={peopleResults}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.peopleList}
+            ListEmptyComponent={
+              <View style={styles.center}>
+                <Ionicons name="people-outline" size={48} color={Colors.textMuted} />
+                <Text style={styles.emptyText}>Geen mensen gevonden</Text>
+              </View>
+            }
+            renderItem={({ item }) => (
+              <PersonCard
+                firstName={item.first_name}
+                lastName={item.last_name}
+                avatarUrl={item.avatar_url}
+                age={item.birth_date ? calculateAge(item.birth_date) : null}
+                city={item.city}
+                bio={item.bio}
+                favouriteArtists={item.favourite_artists}
+                onPress={() => router.push({ pathname: '/user/[id]', params: { id: item.id } })}
+              />
+            )}
+          />
+        ) : (
+          <View style={styles.center}>
+            <Ionicons name="search-outline" size={48} color={Colors.textMuted} />
+            <Text style={styles.emptyText}>Zoek gebruikers</Text>
+          </View>
+        )
+      ) : isSearchActive ? (
         /* ========== SEARCH RESULTS MODE ========== */
         <>
           {/* Artist results */}
@@ -452,6 +589,39 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.xl },
   row: { justifyContent: 'space-between', marginBottom: Spacing.lg },
   cardWrapper: { width: '48%' },
+
+  // People search
+  tabRow: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  tabActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  tabText: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: Colors.text,
+  },
+  peopleList: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
+    gap: Spacing.md,
+  },
 
   // Artist search results
   artistSection: { paddingBottom: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: Spacing.sm },

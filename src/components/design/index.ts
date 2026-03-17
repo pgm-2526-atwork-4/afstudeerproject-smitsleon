@@ -10,6 +10,7 @@ export { FilterModal } from './FilterModal';
 export { LoadingScreen } from './LoadingScreen';
 export { LocationShareModal } from './LocationShareModal';
 export { MetaItem } from './MetaItem';
+export { PersonCard } from './PersonCard';
 export { SectionHeader } from './SectionHeader';
 export { UserAvatar } from './UserAvatar';
 export { VenueChipsGrid } from './VenueChipsGrid';
