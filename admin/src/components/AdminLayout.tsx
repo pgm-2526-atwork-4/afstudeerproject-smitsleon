@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: '📊' },
+  { to: '/', label: 'Dashboard' },
   { to: '/reports', label: 'Reports', icon: '🚩' },
   { to: '/events', label: 'Events', icon: '🎵' },
   { to: '/artists', label: 'Artiesten' },
