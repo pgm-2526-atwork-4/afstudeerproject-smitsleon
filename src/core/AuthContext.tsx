@@ -1,5 +1,6 @@
 import { Session, User } from '@supabase/supabase-js';
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
+import { resolveCurrentCity } from './location';
 import { supabase } from './supabase';
 import { UserProfile } from './types';
 
@@ -70,6 +71,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(p);
     setLoading(false);
   }
+
+  // Auto-update location on app start when user has location enabled
+  useEffect(() => {
+    if (!profile || !profile.share_location || !profile.latitude) return;
+
+    (async () => {
+      try {
+        const result = await resolveCurrentCity(false);
+        if (!result) return;
+
+        // Only update if user moved >~1 km
+        if (
+          result.city === profile.city &&
+          Math.abs((profile.latitude ?? 0) - result.latitude) < 0.01 &&
+          Math.abs((profile.longitude ?? 0) - result.longitude) < 0.01
+        ) return;
+
+        await supabase.from('users').update({
+          city: result.city,
+          latitude: result.latitude,
+          longitude: result.longitude,
+        }).eq('id', profile.id);
+
+        setProfile((prev) => prev ? { ...prev, ...result } : null);
+      } catch {
+        // Silently ignore — location update is best-effort
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id, profile?.share_location]);
 
   async function signIn(email: string, password: string) {
     signingInRef.current = true;

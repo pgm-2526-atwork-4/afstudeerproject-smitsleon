@@ -1,11 +1,11 @@
 import { useAuth } from '@/core/AuthContext';
+import { resolveCurrentCity } from '@/core/location';
 import { supabase } from '@/core/supabase';
 import { VIBE_TAGS, calculateAge } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -117,30 +117,17 @@ export default function EditProfileScreen() {
   // Get location
   async function getLocation() {
     setGettingLocation(true);
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Toegang geweigerd', 'Zonder toestemming kunnen we je locatie niet bepalen.');
-      setGettingLocation(false);
-      setUseLocation(false);
-      return;
-    }
-
     try {
-      const location = await Location.getCurrentPositionAsync({});
-      setLatitude(location.coords.latitude);
-      setLongitude(location.coords.longitude);
-
-      const geocode = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-
-      if (geocode[0] && geocode[0].city) {
-        setCity(geocode[0].city);
-      } else {
-        setCity('Onbekend');
+      const result = await resolveCurrentCity(true);
+      if (!result) {
+        Alert.alert('Toegang geweigerd', 'Zonder toestemming kunnen we je locatie niet bepalen.');
+        setUseLocation(false);
+        return;
       }
-    } catch (e) {
+      setCity(result.city);
+      setLatitude(result.latitude);
+      setLongitude(result.longitude);
+    } catch {
       Alert.alert('Fout', 'Kon de locatie niet bepalen. Controleer of GPS aan staat.');
       setUseLocation(false);
     }
