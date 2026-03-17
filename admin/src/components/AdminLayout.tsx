@@ -4,9 +4,9 @@ import { useAuth } from '../contexts/AuthContext';
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard' },
   { to: '/reports', label: 'Reports' },
-  { to: '/events', label: 'Events', },
+  { to: '/events', label: 'Events' },
   { to: '/artists', label: 'Artiesten' },
-  { to: '/venues', label: 'Venues', icon: '📍' },
+  { to: '/venues', label: 'Venues' },
   { to: '/users', label: 'Gebruikers', icon: '👥' },
 ];
 
