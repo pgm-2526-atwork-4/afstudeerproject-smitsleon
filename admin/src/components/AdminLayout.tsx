@@ -2,12 +2,10 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/reports', label: 'Reports' },
+  { to: '/', label: 'Reports' },
   { to: '/events', label: 'Events' },
   { to: '/artists', label: 'Artiesten' },
   { to: '/venues', label: 'Venues' },
-  { to: '/users', label: 'Gebruikers', icon: '👥' },
 ];
 
 export default function AdminLayout() {
@@ -41,7 +39,6 @@ export default function AdminLayout() {
                 }`
               }
             >
-              <span className="text-base">{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
