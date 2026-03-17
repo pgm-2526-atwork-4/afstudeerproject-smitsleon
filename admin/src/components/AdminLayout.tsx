@@ -5,7 +5,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/reports', label: 'Reports', icon: '🚩' },
   { to: '/events', label: 'Events', icon: '🎵' },
-  { to: '/artists', label: 'Artiesten', icon: '🎤' },
+  { to: '/artists', label: 'Artiesten' },
   { to: '/venues', label: 'Venues', icon: '📍' },
   { to: '/users', label: 'Gebruikers', icon: '👥' },
 ];
