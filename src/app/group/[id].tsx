@@ -2,14 +2,13 @@ import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
-import * as ExpoLocation from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     Image,
-    Linking,
+    KeyboardAvoidingView,
     Modal,
     Platform,
     ScrollView,
@@ -19,7 +18,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Member {
@@ -51,11 +49,9 @@ export default function GroupDetailScreen() {
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [leaving, setLeaving] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [meetingLat, setMeetingLat] = useState<number | null>(null);
-  const [meetingLng, setMeetingLng] = useState<number | null>(null);
   const [meetingName, setMeetingName] = useState('');
-  const [showMapPicker, setShowMapPicker] = useState(false);
-  const [pickerCoord, setPickerCoord] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [showMeetingPointModal, setShowMeetingPointModal] = useState(false);
+  const [editMeetingName, setEditMeetingName] = useState('');
   const [savingMeetingPoint, setSavingMeetingPoint] = useState(false);
 
   // Editable group data (fetched from DB, falls back to params)
@@ -118,7 +114,7 @@ export default function GroupDetailScreen() {
     // Fetch group data from DB to have latest values
     supabase
       .from('groups')
-      .select('title, description, max_members, meeting_point_lat, meeting_point_lng, meeting_point_name')
+      .select('title, description, max_members, meeting_point_name')
       .eq('id', params.id)
       .single()
       .then(({ data }) => {
@@ -126,11 +122,7 @@ export default function GroupDetailScreen() {
           setGroupTitle(data.title ?? params.title ?? '');
           setGroupDescription(data.description ?? '');
           setGroupMaxMembers(data.max_members ?? 6);
-          if (data.meeting_point_lat && data.meeting_point_lng) {
-            setMeetingLat(data.meeting_point_lat);
-            setMeetingLng(data.meeting_point_lng);
-            setMeetingName(data.meeting_point_name ?? '');
-          }
+          setMeetingName(data.meeting_point_name ?? '');
         }
       });
   }, [fetchMembers]);
@@ -216,65 +208,27 @@ export default function GroupDetailScreen() {
     setJoining(false);
   }
 
-  async function openMapPicker() {
-    let coord = pickerCoord;
-    if (meetingLat && meetingLng) {
-      coord = { latitude: meetingLat, longitude: meetingLng };
-    } else {
-      try {
-        const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const loc = await ExpoLocation.getCurrentPositionAsync({});
-          coord = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-        }
-      } catch {}
-    }
-    if (!coord) coord = { latitude: 50.8503, longitude: 4.3517 };
-    setPickerCoord(coord);
-    setShowMapPicker(true);
+  function openMeetingPointEditor() {
+    setEditMeetingName(meetingName);
+    setShowMeetingPointModal(true);
   }
 
   async function handleSaveMeetingPoint() {
-    if (!pickerCoord) return;
+    const name = editMeetingName.trim();
     setSavingMeetingPoint(true);
-
-    let name = '';
-    try {
-      const results = await ExpoLocation.reverseGeocodeAsync(pickerCoord);
-      if (results[0]) {
-        const r = results[0];
-        name = [r.name, r.street, r.city].filter(Boolean).join(', ');
-      }
-    } catch {}
-    if (!name) name = `${pickerCoord.latitude.toFixed(4)}, ${pickerCoord.longitude.toFixed(4)}`;
 
     const { error } = await supabase
       .from('groups')
-      .update({
-        meeting_point_lat: pickerCoord.latitude,
-        meeting_point_lng: pickerCoord.longitude,
-        meeting_point_name: name,
-      })
+      .update({ meeting_point_name: name || null })
       .eq('id', params.id);
 
     if (error) {
       Alert.alert('Fout', 'Opslaan mislukt. Probeer opnieuw.');
     } else {
-      setMeetingLat(pickerCoord.latitude);
-      setMeetingLng(pickerCoord.longitude);
       setMeetingName(name);
-      setShowMapPicker(false);
+      setShowMeetingPointModal(false);
     }
     setSavingMeetingPoint(false);
-  }
-
-  function openMeetingPointInMaps() {
-    if (!meetingLat || !meetingLng) return;
-    const url = Platform.select({
-      ios: `maps:0,0?q=${meetingLat},${meetingLng}`,
-      default: `https://www.google.com/maps/search/?api=1&query=${meetingLat},${meetingLng}`,
-    });
-    Linking.openURL(url!);
   }
 
   function openEditModal() {
@@ -477,9 +431,9 @@ export default function GroupDetailScreen() {
               <View style={styles.meetingPointHeader}>
                 <Text style={styles.sectionLabel}>Meeting Point</Text>
                 {isAdmin && (
-                  <TouchableOpacity onPress={openMapPicker} hitSlop={8}>
+                  <TouchableOpacity onPress={openMeetingPointEditor} hitSlop={8}>
                     <Ionicons
-                      name={meetingLat ? 'create-outline' : 'add-circle-outline'}
+                      name={meetingName ? 'create-outline' : 'add-circle-outline'}
                       size={18}
                       color={Colors.primary}
                     />
@@ -487,41 +441,17 @@ export default function GroupDetailScreen() {
                 )}
               </View>
 
-              {meetingLat && meetingLng ? (
-                <>
-                  <View style={styles.mapPreviewWrapper}>
-                    <MapView
-                      style={styles.mapPreview}
-                      region={{
-                        latitude: meetingLat,
-                        longitude: meetingLng,
-                        latitudeDelta: 0.005,
-                        longitudeDelta: 0.005,
-                      }}
-                      scrollEnabled={false}
-                      zoomEnabled={false}
-                      rotateEnabled={false}
-                      pitchEnabled={false}
-                    >
-                      <Marker coordinate={{ latitude: meetingLat, longitude: meetingLng }} />
-                    </MapView>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.concertRow}
-                    onPress={openMeetingPointInMaps}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="navigate-outline" size={15} color={Colors.primary} />
-                    <Text style={[styles.concertDetail, { color: Colors.primary }]}>{meetingName}</Text>
-                    <Ionicons name="open-outline" size={13} color={Colors.textMuted} />
-                  </TouchableOpacity>
-                </>
+              {meetingName ? (
+                <View style={styles.concertRow}>
+                  <Ionicons name="location-outline" size={15} color={Colors.primary} />
+                  <Text style={styles.concertDetail}>{meetingName}</Text>
+                </View>
               ) : (
                 <View style={styles.concertRow}>
                   <Ionicons name="navigate-outline" size={15} color={Colors.textMuted} />
                   <Text style={[styles.concertDetail, { fontStyle: 'italic' }]}>
                     {isAdmin
-                      ? 'Tik op + om een meeting point te kiezen op de kaart'
+                      ? 'Tik op + om een meeting point in te stellen'
                       : 'Nog geen meeting point ingesteld'}
                   </Text>
                 </View>
@@ -643,58 +573,46 @@ export default function GroupDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Map picker modal */}
-      <Modal visible={showMapPicker} animationType="slide" onRequestClose={() => setShowMapPicker(false)}>
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowMapPicker(false)} hitSlop={8}>
-              <Ionicons name="close" size={24} color={Colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Meeting Point</Text>
+      {/* Meeting point modal */}
+      <Modal visible={showMeetingPointModal} animationType="slide" transparent onRequestClose={() => setShowMeetingPointModal(false)}>
+        <KeyboardAvoidingView style={styles.editModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={styles.editModalContent}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>Meeting Point</Text>
+              <TouchableOpacity onPress={() => setShowMeetingPointModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>Locatie of beschrijving</Text>
+            <TextInput
+              style={styles.input}
+              value={editMeetingName}
+              onChangeText={setEditMeetingName}
+              placeholder="bijv. Hoofdingang, Café De Kroeg, ..."
+              placeholderTextColor={Colors.textMuted}
+              maxLength={120}
+              autoFocus
+            />
+
             <TouchableOpacity
+              style={[styles.saveButton, savingMeetingPoint && styles.saveButtonDisabled]}
               onPress={handleSaveMeetingPoint}
-              disabled={!pickerCoord || savingMeetingPoint}
-              hitSlop={8}
+              disabled={savingMeetingPoint}
             >
               {savingMeetingPoint ? (
-                <ActivityIndicator size="small" color={Colors.primary} />
+                <ActivityIndicator color={Colors.text} />
               ) : (
-                <Text
-                  style={[
-                    styles.modalSaveText,
-                    !pickerCoord && { color: Colors.textMuted },
-                  ]}
-                >
-                  Opslaan
-                </Text>
+                <Text style={styles.saveButtonText}>Opslaan</Text>
               )}
             </TouchableOpacity>
           </View>
-          <Text style={styles.modalHint}>Tik op de kaart om een meeting point te kiezen</Text>
-          <MapView
-            style={styles.modalMap}
-            initialRegion={{
-              latitude: pickerCoord?.latitude ?? 50.8503,
-              longitude: pickerCoord?.longitude ?? 4.3517,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            }}
-            onPress={(e) => setPickerCoord(e.nativeEvent.coordinate)}
-          >
-            {pickerCoord && (
-              <Marker
-                coordinate={pickerCoord}
-                draggable
-                onDragEnd={(e) => setPickerCoord(e.nativeEvent.coordinate)}
-              />
-            )}
-          </MapView>
-        </SafeAreaView>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Edit group modal */}
       <Modal visible={showEditModal} animationType="slide" transparent onRequestClose={() => setShowEditModal(false)}>
-        <View style={styles.editModalOverlay}>
+        <KeyboardAvoidingView style={styles.editModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.editModalContent}>
             <View style={styles.editModalHeader}>
               <Text style={styles.editModalTitle}>Groep aanpassen</Text>
@@ -756,7 +674,7 @@ export default function GroupDetailScreen() {
               )}
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -959,45 +877,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  mapPreviewWrapper: {
-    borderRadius: Radius.md,
-    overflow: 'hidden',
-  },
-  mapPreview: {
-    height: 160,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  modalTitle: {
-    color: Colors.text,
-    fontSize: FontSizes.lg,
-    fontWeight: 'bold',
-  },
-  modalSaveText: {
-    color: Colors.primary,
-    fontSize: FontSizes.md,
-    fontWeight: '600',
-  },
-  modalHint: {
-    color: Colors.textMuted,
-    fontSize: FontSizes.sm,
-    textAlign: 'center',
-    paddingVertical: Spacing.sm,
-  },
-  modalMap: {
-    flex: 1,
   },
   editModalOverlay: {
     flex: 1,

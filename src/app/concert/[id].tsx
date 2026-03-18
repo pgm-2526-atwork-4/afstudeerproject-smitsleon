@@ -10,8 +10,10 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -432,7 +434,7 @@ export default function ConcertDetailScreen() {
 
       {/* Create Group Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Nieuwe groep aanmaken</Text>
@@ -466,7 +468,7 @@ export default function ConcertDetailScreen() {
               {creating ? <ActivityIndicator color={Colors.text} /> : <Text style={styles.createButtonText}>Groep aanmaken</Text>}
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
