@@ -1,3 +1,4 @@
+import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
 import { resolveCurrentCity } from '@/core/location';
 import { supabase } from '@/core/supabase';
@@ -11,6 +12,7 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -48,6 +50,13 @@ export default function OnboardingScreen() {
 
   // Step 3 - vibe tags
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // Step 4 - favourite artists
+  const [artistQuery, setArtistQuery] = useState('');
+  const [artistResults, setArtistResults] = useState<{ id: string; name: string; image_url: string | null; genre: string | null }[]>([]);
+  const [selectedArtists, setSelectedArtists] = useState<Set<string>>(new Set());
+  const [searchingArtists, setSearchingArtists] = useState(false);
+  const [initialArtists, setInitialArtists] = useState<{ id: string; name: string; image_url: string | null; genre: string | null }[]>([]);
 
   // Pick image from phone
   async function pickAvatar() {
@@ -133,6 +142,40 @@ export default function OnboardingScreen() {
     });
   }
 
+  // Search artists
+  async function loadInitialArtists() {
+    const { data } = await supabase
+      .from('artists')
+      .select('id, name, image_url, genre')
+      .limit(20);
+    if (data) setInitialArtists(data);
+  }
+
+  async function searchArtists(query: string) {
+    setArtistQuery(query);
+    if (query.trim().length < 2) {
+      setArtistResults([]);
+      return;
+    }
+    setSearchingArtists(true);
+    const { data } = await supabase
+      .from('artists')
+      .select('id, name, image_url, genre')
+      .ilike('name', `%${query.trim()}%`)
+      .limit(20);
+    setArtistResults(data ?? []);
+    setSearchingArtists(false);
+  }
+
+  function toggleArtist(id: string) {
+    setSelectedArtists((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   function canGoNext(): boolean {
     if (step === 1) return firstName.trim() !== '' && lastName.trim() !== '' && avatarUri !== null && birthDate !== null;
     return true;
@@ -169,8 +212,16 @@ export default function OnboardingScreen() {
         return;
       }
 
+      // Save favourite artists
+      if (selectedArtists.size > 0) {
+        const rows = Array.from(selectedArtists).map((artist_id) => ({
+          user_id: user.id,
+          artist_id,
+        }));
+        await supabase.from('favourite_artists').upsert(rows);
+      }
+
       await refreshProfile();
-      router.replace('/(tabs)/home');
     } catch (e) {
       Alert.alert('Fout', 'Er ging iets mis. Probeer het opnieuw.');
       setSaving(false);
@@ -195,7 +246,7 @@ export default function OnboardingScreen() {
 
           {/* Progress indicator */}
           <View style={styles.progress}>
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <View
                 key={s}
                 style={[styles.dot, s === step && styles.dotActive, s < step && styles.dotDone]}
@@ -346,6 +397,65 @@ export default function OnboardingScreen() {
               </View>
             </View>
           )}
+
+          {/* Step 4: Favourite artists */}
+          {step === 4 && (
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitle}>Favoriete artiesten</Text>
+              <Text style={styles.stepSubtitle}>Zoek en voeg artiesten toe (optioneel)</Text>
+
+              <View style={styles.artistSearchRow}>
+                <Ionicons name="search" size={18} color={Colors.textMuted} />
+                <TextInput
+                  style={styles.artistSearchInput}
+                  placeholder="Zoek een artiest..."
+                  placeholderTextColor={Colors.textMuted}
+                  value={artistQuery}
+                  onChangeText={searchArtists}
+                  autoCapitalize="none"
+                />
+                {artistQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => { setArtistQuery(''); setArtistResults([]); }}>
+                    <Ionicons name="close-circle" size={18} color={Colors.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {searchingArtists && <ActivityIndicator size="small" color={Colors.primary} style={{ marginTop: Spacing.md }} />}
+
+              <FlatList
+                data={artistQuery.trim().length >= 2 ? artistResults : initialArtists}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                renderItem={({ item }) => {
+                  const isSelected = selectedArtists.has(item.id);
+                  return (
+                    <TouchableOpacity style={styles.artistRow} onPress={() => toggleArtist(item.id)}>
+                      <UserAvatar uri={item.image_url} initials={item.name.substring(0, 2).toUpperCase()} size={44} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.artistName} numberOfLines={1}>{item.name}</Text>
+                        {item.genre && <Text style={styles.artistGenre} numberOfLines={1}>{item.genre}</Text>}
+                      </View>
+                      <Ionicons
+                        name={isSelected ? 'heart' : 'heart-outline'}
+                        size={22}
+                        color={isSelected ? Colors.primary : Colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                  );
+                }}
+                ListEmptyComponent={
+                  artistQuery.length >= 2 && !searchingArtists ? (
+                    <Text style={styles.artistEmpty}>Geen artiesten gevonden</Text>
+                  ) : null
+                }
+              />
+
+              {selectedArtists.size > 0 && (
+                <Text style={styles.artistCount}>{selectedArtists.size} artiest{selectedArtists.size !== 1 ? 'en' : ''} geselecteerd</Text>
+              )}
+            </View>
+          )}
         </ScrollView>
 
         {/* Navigation buttons */}
@@ -358,10 +468,15 @@ export default function OnboardingScreen() {
             <View />
           )}
 
-          {step < 3 ? (
+          {step < 4 ? (
             <TouchableOpacity
               style={[styles.navNext, !canGoNext() && styles.navDisabled]}
-              onPress={() => canGoNext() && setStep(step + 1)}
+              onPress={() => {
+                if (!canGoNext()) return;
+                const next = step + 1;
+                if (next === 4 && initialArtists.length === 0) loadInitialArtists();
+                setStep(next);
+              }}
               disabled={!canGoNext()}
             >
               <Text style={styles.navNextText}>Volgende</Text>
@@ -566,5 +681,49 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: FontSizes.md,
     fontWeight: 'bold',
+  },
+  artistSearchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+  },
+  artistSearchInput: {
+    flex: 1,
+    color: Colors.text,
+    fontSize: FontSizes.md,
+    paddingVertical: Spacing.md,
+  },
+  artistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  artistName: {
+    color: Colors.text,
+    fontSize: FontSizes.md,
+    fontWeight: '500',
+  },
+  artistGenre: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.xs,
+  },
+  artistEmpty: {
+    color: Colors.textMuted,
+    fontSize: FontSizes.sm,
+    textAlign: 'center',
+    marginTop: Spacing.lg,
+  },
+  artistCount: {
+    color: Colors.primary,
+    fontSize: FontSizes.sm,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: Spacing.md,
   },
 });
