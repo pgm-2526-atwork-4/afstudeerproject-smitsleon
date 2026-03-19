@@ -12,16 +12,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -482,6 +482,13 @@ export default function HomeScreen() {
               onSeeMore={() => router.push({ pathname: '/section-events', params: { section: 'upcoming' } })}
             />
             <ConcertSection
+              title="Concerten met groepen"
+              events={sections.withGroups}
+              groupCounts={sections.groupCounts}
+              onEventPress={navigateToEvent}
+              onSeeMore={() => router.push({ pathname: '/section-events', params: { section: 'withGroups' } })}
+            />
+            <ConcertSection
               title="Je buddies gaan ook"
               events={sections.buddies}
               groupCounts={sections.groupCounts}
@@ -489,11 +496,25 @@ export default function HomeScreen() {
               onSeeMore={() => router.push({ pathname: '/section-events', params: { section: 'buddies' } })}
             />
             <ConcertSection
+              title="Buddies geïnteresseerd"
+              events={sections.buddyInterested}
+              groupCounts={sections.groupCounts}
+              onEventPress={navigateToEvent}
+              onSeeMore={() => router.push({ pathname: '/section-events', params: { section: 'buddyInterested' } })}
+            />
+            <ConcertSection
               title="Favoriete artiesten"
               events={sections.favouriteArtists}
               groupCounts={sections.groupCounts}
               onEventPress={navigateToEvent}
               onSeeMore={() => router.push({ pathname: '/section-events', params: { section: 'favouriteArtists' } })}
+            />
+            <ConcertSection
+              title="Favoriete venues"
+              events={sections.favouriteVenues}
+              groupCounts={sections.groupCounts}
+              onEventPress={navigateToEvent}
+              onSeeMore={() => router.push({ pathname: '/section-events', params: { section: 'favouriteVenues' } })}
             />
             <ConcertSection
               title="In de buurt"
@@ -506,7 +527,10 @@ export default function HomeScreen() {
             {/* Fallback if all sections are empty */}
             {sections.upcoming.length === 0 &&
               sections.buddies.length === 0 &&
+              sections.buddyInterested.length === 0 &&
               sections.favouriteArtists.length === 0 &&
+              sections.favouriteVenues.length === 0 &&
+              sections.withGroups.length === 0 &&
               sections.nearby.length === 0 && (
                 <View style={styles.center}>
                   <Ionicons name="musical-notes-outline" size={48} color={Colors.textMuted} />

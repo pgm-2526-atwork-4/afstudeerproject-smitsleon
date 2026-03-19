@@ -21,12 +21,15 @@ function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-type SectionType = 'upcoming' | 'buddies' | 'favouriteArtists' | 'nearby';
+type SectionType = 'upcoming' | 'buddies' | 'buddyInterested' | 'favouriteArtists' | 'favouriteVenues' | 'withGroups' | 'nearby';
 
 const SECTION_TITLES: Record<SectionType, string> = {
   upcoming: 'Binnenkort',
   buddies: 'Je buddies gaan ook',
+  buddyInterested: 'Buddies geïnteresseerd',
   favouriteArtists: 'Favoriete artiesten',
+  favouriteVenues: 'Favoriete venues',
+  withGroups: 'Concerten met groepen',
   nearby: 'In de buurt',
 };
 
@@ -84,6 +87,33 @@ export default function SectionEventsScreen() {
         break;
       }
 
+      case 'buddyInterested': {
+        if (!user) break;
+        const { data: buddyRows2 } = await supabase
+          .from('buddies')
+          .select('user_id_1, user_id_2')
+          .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
+        const buddyIds2 = (buddyRows2 ?? []).map((r: any) =>
+          r.user_id_1 === user.id ? r.user_id_2 : r.user_id_1
+        );
+        if (buddyIds2.length === 0) break;
+        const { data: statusRows2 } = await supabase
+          .from('concert_status')
+          .select('event_id')
+          .in('user_id', buddyIds2)
+          .eq('status', 'interested');
+        const eventIds2 = [...new Set((statusRows2 ?? []).map((r: any) => r.event_id))];
+        if (eventIds2.length === 0) break;
+        const { data: eventRows2 } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', eventIds2)
+          .gte('date', now)
+          .order('date', { ascending: true });
+        result = (eventRows2 ?? []).map(dbRowToEvent);
+        break;
+      }
+
       case 'favouriteArtists': {
         if (!user) break;
         const { data: favRows } = await supabase
@@ -102,6 +132,43 @@ export default function SectionEventsScreen() {
           .order('date', { ascending: true })
           .limit(20);
         result = (rows ?? []).map(dbRowToEvent);
+        break;
+      }
+
+      case 'favouriteVenues': {
+        if (!user) break;
+        const { data: favVRows } = await supabase
+          .from('favourite_venues')
+          .select('venue_id')
+          .eq('user_id', user.id);
+        const venueIds = (favVRows ?? []).map((r: any) => r.venue_id).filter(Boolean) as string[];
+        if (venueIds.length === 0) break;
+        const { data: vRows } = await supabase
+          .from('events')
+          .select('*')
+          .in('venue_id', venueIds)
+          .gte('date', now)
+          .order('date', { ascending: true })
+          .limit(50);
+        result = (vRows ?? []).map(dbRowToEvent);
+        break;
+      }
+
+      case 'withGroups': {
+        const { data: grpRows } = await supabase
+          .from('groups')
+          .select('event_id')
+          .limit(200);
+        const grpEventIds = [...new Set((grpRows ?? []).map((r: any) => r.event_id))];
+        if (grpEventIds.length === 0) break;
+        const { data: gRows } = await supabase
+          .from('events')
+          .select('*')
+          .in('id', grpEventIds)
+          .gte('date', now)
+          .order('date', { ascending: true })
+          .limit(50);
+        result = (gRows ?? []).map(dbRowToEvent);
         break;
       }
 
