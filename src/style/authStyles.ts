@@ -18,6 +18,12 @@ export const authStyles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  logo: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+    alignSelf: 'center',
+  },
   subtitle: {
     color: Colors.textSecondary,
     fontSize: FontSizes.md,

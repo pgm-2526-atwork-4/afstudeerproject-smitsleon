@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
     ActivityIndicator,
+    Image,
     KeyboardAvoidingView,
     Platform,
     Text,
@@ -42,6 +43,7 @@ export function LoginForm({ onRegisterPress }: LoginFormProps) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={authStyles.inner}
     >
+      <Image source={require('../../../assets/logo/logo-green.png')} style={authStyles.logo} />
       <Text style={authStyles.title}>Concert Buddy</Text>
       <Text style={authStyles.subtitle}>Log in op je account</Text>
 

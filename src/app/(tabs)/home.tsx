@@ -247,7 +247,7 @@ export default function HomeScreen() {
           <Image source={require('../../../assets/logo/logo-green.png')} style={styles.headerLogo} />
           <Text style={styles.title}>Concert Buddy</Text>
         </View>
-        {user ? (
+        {user && (
         <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')}>
           <Ionicons name="notifications-outline" size={24} color={Colors.text} />
           {unreadCount > 0 && (
@@ -255,10 +255,6 @@ export default function HomeScreen() {
               <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
             </View>
           )}
-        </TouchableOpacity>
-        ) : (
-        <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/(tabs)/profile')}>
-          <Ionicons name="log-in-outline" size={24} color={Colors.primary} />
         </TouchableOpacity>
         )}
       </View>
