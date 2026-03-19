@@ -66,13 +66,18 @@ export function useChatImages({ userId, sendMessage }: Opts) {
       const asset = result.assets[0];
       const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
       const fileName = `${userId}/${Date.now()}.${ext}`;
+      const mimeType = asset.mimeType ?? `image/${ext}`;
 
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      const formData = new FormData();
+      formData.append('', {
+        uri: asset.uri,
+        name: fileName,
+        type: mimeType,
+      } as any);
 
       const { error: uploadError } = await supabase.storage
         .from('chat-images')
-        .upload(fileName, blob, { contentType: asset.mimeType ?? `image/${ext}` });
+        .upload(fileName, formData, { contentType: mimeType });
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
