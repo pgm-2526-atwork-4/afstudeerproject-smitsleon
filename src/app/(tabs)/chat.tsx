@@ -319,7 +319,9 @@ export default function ChatScreen() {
                     {item.last_message_sender_id === user?.id ? 'Jij' : item.last_message_sender}:{' '}
                   </Text>
                 ) : null}
-                {item.last_message}
+                {item.last_message.startsWith('📷 ')
+                  ? 'Heeft een afbeelding gestuurd'
+                  : item.last_message}
               </Text>
             ) : (
               <Text style={styles.lastMessage} numberOfLines={1}>Nog geen berichten</Text>
