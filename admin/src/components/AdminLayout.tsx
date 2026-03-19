@@ -17,11 +17,10 @@ export default function AdminLayout() {
       <aside className="w-64 shrink-0 bg-cb-surface border-r border-cb-border flex flex-col">
         {/* Logo */}
         <div className="px-6 py-5 border-b border-cb-border">
-          <h1 className="text-lg font-bold text-cb-primary flex items-center gap-2">
+          <h1 className="text-lg font-bold text-cb-text flex items-center gap-2">
             <img src="/logo-green.svg" alt="Logo" className="h-6 w-6" />
             Concert Buddy
           </h1>
-          <p className="text-xs text-cb-text-muted mt-1">Admin Panel</p>
         </div>
 
         {/* Nav items */}
@@ -47,9 +46,6 @@ export default function AdminLayout() {
         {/* User info + logout */}
         <div className="px-4 py-4 border-t border-cb-border">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-cb-primary/20 flex items-center justify-center text-sm font-bold text-cb-primary">
-              {profile?.first_name?.[0]?.toUpperCase() ?? 'A'}
-            </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-cb-text truncate">
                 {profile?.first_name} {profile?.last_name}
