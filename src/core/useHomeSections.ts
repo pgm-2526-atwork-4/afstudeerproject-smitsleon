@@ -57,7 +57,7 @@ export function useHomeSections() {
       return (rows ?? []).map(dbRowToEvent);
     })();
 
-    // 2. Buddy events (already uses Supabase)
+    // 2. Buddy events — concerts where buddies marked "going"
     const buddyPromise = (async (): Promise<Event[]> => {
       if (!user) return [];
       const { data: buddyRows } = await supabase
@@ -70,20 +70,13 @@ export function useHomeSections() {
       );
       if (buddyIds.length === 0) return [];
 
-      const { data: memberRows } = await supabase
-        .from('group_members')
-        .select('group_id')
-        .in('user_id', buddyIds);
-
-      const groupIds = [...new Set((memberRows ?? []).map((r: any) => r.group_id))];
-      if (groupIds.length === 0) return [];
-
-      const { data: groupRows } = await supabase
-        .from('groups')
+      const { data: statusRows } = await supabase
+        .from('concert_status')
         .select('event_id')
-        .in('id', groupIds);
+        .in('user_id', buddyIds)
+        .eq('status', 'going');
 
-      const eventIds = [...new Set((groupRows ?? []).map((r: any) => r.event_id))];
+      const eventIds = [...new Set((statusRows ?? []).map((r: any) => r.event_id))];
       if (eventIds.length === 0) return [];
 
       const { data: eventRows } = await supabase

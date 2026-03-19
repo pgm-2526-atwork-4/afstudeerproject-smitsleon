@@ -1,6 +1,7 @@
 export { ArtistChipsGrid } from './ArtistChipsGrid';
 export type { ArtistChip } from './ArtistChipsGrid';
 export { AuthWall } from './AuthWall';
+export { BuddyConcertStatus } from './BuddyConcertStatus';
 export { ChatBubble } from './ChatBubble';
 export { ChatInput } from './ChatInput';
 export { ConcertCard } from './ConcertCard';

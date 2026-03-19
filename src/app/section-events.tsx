@@ -67,17 +67,12 @@ export default function SectionEventsScreen() {
           r.user_id_1 === user.id ? r.user_id_2 : r.user_id_1
         );
         if (buddyIds.length === 0) break;
-        const { data: memberRows } = await supabase
-          .from('group_members')
-          .select('group_id')
-          .in('user_id', buddyIds);
-        const groupIds = [...new Set((memberRows ?? []).map((r: any) => r.group_id))];
-        if (groupIds.length === 0) break;
-        const { data: groupRows } = await supabase
-          .from('groups')
+        const { data: statusRows } = await supabase
+          .from('concert_status')
           .select('event_id')
-          .in('id', groupIds);
-        const eventIds = [...new Set((groupRows ?? []).map((r: any) => r.event_id))];
+          .in('user_id', buddyIds)
+          .eq('status', 'going');
+        const eventIds = [...new Set((statusRows ?? []).map((r: any) => r.event_id))];
         if (eventIds.length === 0) break;
         const { data: eventRows } = await supabase
           .from('events')

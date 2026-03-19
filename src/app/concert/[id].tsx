@@ -1,7 +1,9 @@
+import { BuddyConcertStatus } from '@/components/design/BuddyConcertStatus';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { dbRowToEvent, Event, Group } from '@/core/types';
+import { useBuddyConcertStatus } from '@/core/useBuddyConcertStatus';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -41,6 +43,8 @@ export default function ConcertDetailScreen() {
   const [creating, setCreating] = useState(false);
   const [concertStatus, setConcertStatus] = useState<'interested' | 'going' | null>(null);
   const [lineupArtists, setLineupArtists] = useState<{ id: string; name: string; image_url: string | null; genre: string | null }[]>([]);
+
+  const buddyStatuses = useBuddyConcertStatus(user?.id, id);
 
   // Fetch event data from Supabase
   useEffect(() => {
@@ -350,6 +354,9 @@ export default function ConcertDetailScreen() {
         </View>
         )}
 
+        {/* Buddy status section */}
+        {user && <BuddyConcertStatus buddyStatuses={buddyStatuses} />}
+
         {/* Groups section */}
         <View style={styles.groupsSection}>
           <View style={styles.groupsHeader}>
@@ -470,6 +477,7 @@ export default function ConcertDetailScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
     </View>
   );
 }
@@ -721,4 +729,5 @@ const styles = StyleSheet.create({
     minWidth: 32,
     textAlign: 'center',
   },
+
 });
