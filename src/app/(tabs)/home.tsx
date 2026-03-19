@@ -537,6 +537,28 @@ export default function HomeScreen() {
                   <Text style={styles.emptyText}>Geen concerten gevonden</Text>
                 </View>
               )}
+
+            {/* All concerts grid — withGroups first, then remaining upcoming */}
+            {sections.allConcerts.length > 0 && (
+              <View style={styles.allConcertsSection}>
+                <Text style={styles.allConcertsTitle}>Alle concerten</Text>
+                <View style={styles.allConcertsGrid}>
+                  {sections.allConcerts.map((item) => (
+                    <View key={item.id} style={styles.allConcertsCard}>
+                      <ConcertCard
+                        name={item.name}
+                        date={item.date}
+                        venue={item.venue}
+                        imageUrl={item.imageUrl}
+                        groupCount={sections.groupCounts[item.id] ?? 0}
+                        fill
+                        onPress={() => navigateToEvent(item)}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
           </ScrollView>
         )
       )}
@@ -663,4 +685,25 @@ const styles = StyleSheet.create({
   artistAvatarPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   artistName: { color: Colors.text, fontSize: FontSizes.xs, fontWeight: '600', textAlign: 'center' },
   artistGenre: { color: Colors.textMuted, fontSize: 10, textAlign: 'center' },
+
+  // All concerts grid
+  allConcertsSection: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+  },
+  allConcertsTitle: {
+    color: Colors.text,
+    fontSize: FontSizes.lg,
+    fontWeight: 'bold',
+    marginBottom: Spacing.md,
+  },
+  allConcertsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  allConcertsCard: {
+    width: '48%',
+  },
 });

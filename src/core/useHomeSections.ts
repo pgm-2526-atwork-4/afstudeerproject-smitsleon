@@ -11,6 +11,7 @@ interface HomeSections {
   favouriteVenues: Event[];
   withGroups: Event[];
   nearby: Event[];
+  allConcerts: Event[];
   groupCounts: Record<string, number>;
   loading: boolean;
 }
@@ -44,6 +45,7 @@ export function useHomeSections() {
     favouriteVenues: [],
     withGroups: [],
     nearby: [],
+    allConcerts: [],
     groupCounts: {},
     loading: true,
   });
@@ -257,6 +259,14 @@ export function useHomeSections() {
     const sortWithGroups = (events: Event[]) =>
       [...events].sort((a, b) => (groupCounts[b.id] ?? 0) - (groupCounts[a.id] ?? 0));
 
+    // Build allConcerts: withGroups first (sorted by group count), then remaining upcoming
+    const withGroupIds = new Set(withGroups.map((e) => e.id));
+    const remainingUpcoming = upcoming.filter((e) => !withGroupIds.has(e.id));
+    const allConcerts = [
+      ...sortWithGroups(withGroups),
+      ...remainingUpcoming,
+    ];
+
     setData({
       upcoming: sortWithGroups(upcoming),
       buddies: sortWithGroups(buddies),
@@ -265,6 +275,7 @@ export function useHomeSections() {
       favouriteVenues: sortWithGroups(favouriteVenues),
       withGroups: sortWithGroups(withGroups),
       nearby: sortWithGroups(nearby),
+      allConcerts,
       groupCounts,
       loading: false,
     });
