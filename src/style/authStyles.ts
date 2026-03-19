@@ -13,7 +13,7 @@ export const authStyles = StyleSheet.create({
     gap: Spacing.md,
   },
   title: {
-    color: Colors.primary,
+    color: Colors.text,
     fontSize: 36,
     fontWeight: 'bold',
     textAlign: 'center',

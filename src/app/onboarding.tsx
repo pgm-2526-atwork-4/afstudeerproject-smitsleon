@@ -235,12 +235,6 @@ export default function OnboardingScreen() {
                 value={lastName}
                 onChangeText={setLastName}
               />
-              <TextInput
-                style={[styles.input, styles.inputDisabled]}
-                value={user?.email ?? ''}
-                editable={false}
-              />
-
               {/* Birth date picker */}
               <TouchableOpacity
                 style={styles.input}
