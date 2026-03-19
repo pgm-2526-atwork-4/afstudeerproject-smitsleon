@@ -275,7 +275,7 @@ export default function HomeScreen() {
           style={[styles.tab, searchMode === 'people' && styles.tabActive]}
           onPress={() => switchMode('people')}
         >
-          <Text style={[styles.tabText, searchMode === 'people' && styles.tabTextActive]}>Mensen</Text>
+          <Text style={[styles.tabText, searchMode === 'people' && styles.tabTextActive]}>Gebruikers</Text>
         </TouchableOpacity>
       </View>
 
@@ -319,7 +319,7 @@ export default function HomeScreen() {
         peopleLoading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>Mensen zoeken...</Text>
+            <Text style={styles.loadingText}>Gebruikers zoeken...</Text>
           </View>
         ) : isSearchActive ? (
           <FlatList
@@ -329,7 +329,7 @@ export default function HomeScreen() {
             ListEmptyComponent={
               <View style={styles.center}>
                 <Ionicons name="people-outline" size={48} color={Colors.textMuted} />
-                <Text style={styles.emptyText}>Geen mensen gevonden</Text>
+                <Text style={styles.emptyText}>Geen gebruikers gevonden</Text>
               </View>
             }
             renderItem={({ item }) => (
