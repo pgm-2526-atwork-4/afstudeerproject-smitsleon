@@ -2,6 +2,7 @@ import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -12,6 +13,7 @@ import {
   Modal,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -58,6 +60,12 @@ export default function GroupDetailScreen() {
   const [groupTitle, setGroupTitle] = useState(params.title ?? '');
   const [groupDescription, setGroupDescription] = useState(params.description ?? '');
   const [groupMaxMembers, setGroupMaxMembers] = useState(parseInt(params.max_members, 10) || 6);
+
+  // Event data (fetched from DB when params are missing, e.g. deep link)
+  const [eventName, setEventName] = useState(params.event_name ?? '');
+  const [eventImageUrl, setEventImageUrl] = useState(params.event_image_url ?? '');
+  const [eventDate, setEventDate] = useState(params.event_date ?? '');
+  const [eventLocation, setEventLocation] = useState(params.event_location ?? '');
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -111,10 +119,13 @@ export default function GroupDetailScreen() {
 
   useEffect(() => {
     fetchMembers();
-    // Fetch group data from DB to have latest values
+    // Fetch group + event data from DB to have latest values (also supports deep link opens)
     supabase
       .from('groups')
-      .select('title, description, max_members, meeting_point_name')
+      .select(`
+        title, description, max_members, meeting_point_name,
+        events ( id, name, image_url, date, location_name, city )
+      `)
       .eq('id', params.id)
       .single()
       .then(({ data }) => {
@@ -123,9 +134,20 @@ export default function GroupDetailScreen() {
           setGroupDescription(data.description ?? '');
           setGroupMaxMembers(data.max_members ?? 6);
           setMeetingName(data.meeting_point_name ?? '');
+
+          const ev = (data as any).events;
+          if (ev) {
+            if (!params.event_name) setEventName(ev.name ?? '');
+            if (!params.event_image_url) setEventImageUrl(ev.image_url ?? '');
+            if (!params.event_date) setEventDate(ev.date ?? '');
+            if (!params.event_location) {
+              const loc = [ev.location_name, ev.city].filter(Boolean).join(', ');
+              setEventLocation(loc);
+            }
+          }
         }
       });
-  }, [fetchMembers]);
+  }, [fetchMembers, params.id, params.title, params.event_name, params.event_image_url, params.event_date, params.event_location]);
 
   async function handleLeaveGroup() {
     if (!user) return;
@@ -347,19 +369,30 @@ export default function GroupDetailScreen() {
     );
   }
 
+  async function handleShareInvite() {
+    const link = Linking.createURL(`/group/${params.id}`);
+    try {
+      await Share.share({
+        message: `Join mijn groep "${groupTitle}" op Concert Buddy! 🎶\n${link}`,
+      });
+    } catch {
+      // user cancelled
+    }
+  }
+
   const initials = (m: Member) =>
     `${m.first_name.charAt(0)}${m.last_name.charAt(0)}`.toUpperCase();
 
-  const eventDate = params.event_date ? new Date(params.event_date) : null;
-  const hasTime = eventDate ? eventDate.getUTCHours() !== 0 || eventDate.getUTCMinutes() !== 0 : false;
+  const parsedEventDate = eventDate ? new Date(eventDate) : null;
+  const hasTime = parsedEventDate ? parsedEventDate.getUTCHours() !== 0 || parsedEventDate.getUTCMinutes() !== 0 : false;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView>
         {/* Header image */}
         <View style={styles.imageWrapper}>
-          {params.event_image_url ? (
-            <Image source={{ uri: params.event_image_url }} style={styles.headerImage} />
+          {eventImageUrl ? (
+            <Image source={{ uri: eventImageUrl }} style={styles.headerImage} />
           ) : (
             <View style={[styles.headerImage, styles.headerImagePlaceholder]}>
               <Ionicons name="musical-notes" size={48} color={Colors.textMuted} />
@@ -372,17 +405,24 @@ export default function GroupDetailScreen() {
             <Ionicons name="arrow-back" size={24} color={Colors.text} />
           </TouchableOpacity>
 
-          {/* Settings button — admin only */}
-          {isAdmin && (
-            <TouchableOpacity style={styles.settingsButton} onPress={openEditModal}>
-              <Ionicons name="settings-outline" size={22} color={Colors.text} />
-            </TouchableOpacity>
-          )}
+          {/* Header action buttons */}
+          <View style={styles.headerActions}>
+            {isMember && (
+              <TouchableOpacity style={styles.headerActionButton} onPress={handleShareInvite}>
+                <Ionicons name="share-outline" size={22} color={Colors.text} />
+              </TouchableOpacity>
+            )}
+            {isAdmin && (
+              <TouchableOpacity style={styles.headerActionButton} onPress={openEditModal}>
+                <Ionicons name="settings-outline" size={22} color={Colors.text} />
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Group title on image */}
           <View style={styles.imageTitleWrapper}>
             <Text style={styles.groupName}>{groupTitle}</Text>
-            <Text style={styles.concertName}>{params.event_name}</Text>
+            <Text style={styles.concertName}>{eventName}</Text>
           </View>
         </View>
 
@@ -399,28 +439,28 @@ export default function GroupDetailScreen() {
           {/* Concert info */}
           <View style={styles.concertCard}>
             <Text style={styles.sectionLabel}>Info over Concert</Text>
-            {eventDate ? (
+            {parsedEventDate ? (
               <View style={styles.concertRow}>
                 <Ionicons name="calendar-outline" size={15} color={Colors.primary} />
                 <Text style={styles.concertDetail}>
-                  {eventDate.toLocaleDateString('nl-BE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  {parsedEventDate.toLocaleDateString('nl-BE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </Text>
               </View>
             ) : null}
-            {eventDate ? (
+            {parsedEventDate ? (
               <View style={styles.concertRow}>
                 <Ionicons name="time-outline" size={15} color={Colors.primary} />
                 <Text style={styles.concertDetail}>
                   {hasTime
-                    ? eventDate.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })
+                    ? parsedEventDate.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })
                     : 'Tijd nog onbekend'}
                 </Text>
               </View>
             ) : null}
-            {params.event_location ? (
+            {eventLocation ? (
               <View style={styles.concertRow}>
                 <Ionicons name="location-outline" size={15} color={Colors.primary} />
-                <Text style={styles.concertDetail}>{params.event_location}</Text>
+                <Text style={styles.concertDetail}>{eventLocation}</Text>
               </View>
             ) : null}
           </View>
@@ -701,10 +741,14 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     padding: Spacing.sm,
   },
-  settingsButton: {
+  headerActions: {
     position: 'absolute',
     top: 50,
     right: Spacing.lg,
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  headerActionButton: {
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderRadius: Radius.full,
     padding: Spacing.sm,
