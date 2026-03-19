@@ -257,7 +257,7 @@ export default function HomeScreen() {
           )}
         </TouchableOpacity>
         ) : (
-        <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/(auth)/login')}>
+        <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/(tabs)/profile')}>
           <Ionicons name="log-in-outline" size={24} color={Colors.primary} />
         </TouchableOpacity>
         )}

@@ -9,18 +9,18 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -43,7 +43,7 @@ export default function OnboardingScreen() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [useLocation, setUseLocation] = useState(false);
-  const [shareLocation, setShareLocation] = useState(true);
+  const [shareLocation, setShareLocation] = useState(false);
   const [bio, setBio] = useState('');
 
   // Step 3 - vibe tags
@@ -133,9 +133,8 @@ export default function OnboardingScreen() {
     });
   }
 
-  // Validate step 1
   function canGoNext(): boolean {
-    if (step === 1) return firstName.trim() !== '' && lastName.trim() !== '' && avatarUri !== null;
+    if (step === 1) return firstName.trim() !== '' && lastName.trim() !== '' && avatarUri !== null && birthDate !== null;
     return true;
   }
 
@@ -184,14 +183,15 @@ export default function OnboardingScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
+        {/* Close button */}
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={signOut}
+        >
+          <Ionicons name="close" size={28} color={Colors.textSecondary} />
+        </TouchableOpacity>
+
         <ScrollView contentContainerStyle={styles.scroll}>
-          {/* Sign out button */}
-          <TouchableOpacity
-            style={{ alignSelf: 'flex-end', padding: Spacing.sm }}
-            onPress={signOut}
-          >
-            <Ionicons name="log-out-outline" size={24} color={Colors.textMuted} />
-          </TouchableOpacity>
 
           {/* Progress indicator */}
           <View style={styles.progress}>
@@ -240,14 +240,6 @@ export default function OnboardingScreen() {
                 value={user?.email ?? ''}
                 editable={false}
               />
-            </View>
-          )}
-
-          {/* Step 2: Optional info */}
-          {step === 2 && (
-            <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Over jou</Text>
-              <Text style={styles.stepSubtitle}>Dit is optioneel</Text>
 
               {/* Birth date picker */}
               <TouchableOpacity
@@ -273,6 +265,14 @@ export default function OnboardingScreen() {
                   themeVariant="dark"
                 />
               )}
+            </View>
+          )}
+
+          {/* Step 2: Optional info */}
+          {step === 2 && (
+            <View style={styles.stepContent}>
+              <Text style={styles.stepTitle}>Over jou</Text>
+              <Text style={styles.stepSubtitle}>Dit is optioneel</Text>
 
               {/* GPS Location Toggle */}
               <View style={styles.switchRow}>
@@ -395,6 +395,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  closeButton: {
+    alignSelf: 'flex-start',
+    padding: Spacing.lg,
   },
   scroll: {
     flexGrow: 1,

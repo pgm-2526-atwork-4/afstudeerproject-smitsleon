@@ -1,118 +1,14 @@
-import { useAuth } from '@/core/AuthContext';
-import { authStyles as styles } from '@/style/authStyles';
-import { Colors } from '@/style/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { RegisterForm } from '@/components/functional/RegisterForm';
+import { authStyles } from '@/style/authStyles';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
-  const { signUp } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function handleRegister() {
-    if (!email || !password || !confirmPassword) {
-      setError('Vul alle velden in');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Wachtwoorden komen niet overeen');
-      return;
-    }
-    if (password.length < 6) {
-      setError('Wachtwoord moet minstens 6 tekens zijn');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    const result = await signUp(email, password);
-    setLoading(false);
-    if (result.error) setError(result.error);
-  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.inner}
-      >
-        <Text style={styles.title}>Concert Buddy</Text>
-        <Text style={styles.subtitle}>Maak een account aan</Text>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <TextInput
-          style={styles.input}
-          placeholder="E-mail"
-          placeholderTextColor={Colors.textMuted}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <View style={styles.passwordRow}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Wachtwoord"
-            placeholderTextColor={Colors.textMuted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            autoCapitalize="none"
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-            <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color={Colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.passwordRow}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Bevestig wachtwoord"
-            placeholderTextColor={Colors.textMuted}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry={!showConfirm}
-            autoCapitalize="none"
-          />
-          <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeButton}>
-            <Ionicons name={showConfirm ? 'eye-off' : 'eye'} size={20} color={Colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={Colors.text} />
-          ) : (
-            <Text style={styles.buttonText}>Registreer</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.link}>
-            Heb je al een account? <Text style={styles.linkBold}>Log in</Text>
-          </Text>
-        </TouchableOpacity>
-      </KeyboardAvoidingView>
+    <SafeAreaView style={authStyles.container}>
+      <RegisterForm onLoginPress={() => router.back()} />
     </SafeAreaView>
   );
 }

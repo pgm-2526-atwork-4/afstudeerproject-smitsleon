@@ -1,11 +1,11 @@
 import { ArtistChip, ArtistChipsGrid } from '@/components/design/ArtistChipsGrid';
-import { AuthWall } from '@/components/design/AuthWall';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { MetaItem } from '@/components/design/MetaItem';
 import { SectionHeader } from '@/components/design/SectionHeader';
 import { UserAvatar } from '@/components/design/UserAvatar';
 import { VenueChip, VenueChipsGrid } from '@/components/design/VenueChipsGrid';
 import { VibeTags } from '@/components/design/VibeTags';
+import { LoginForm } from '@/components/functional/LoginForm';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { calculateAge } from '@/core/types';
@@ -84,10 +84,9 @@ export default function ProfileScreen() {
 
   if (!user) {
     return (
-      <AuthWall
-        title="Bekijk je profiel"
-        subtitle="Log in om je profiel te bekijken en te bewerken."
-      />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <LoginForm onRegisterPress={() => router.push('/(tabs)/register')} />
+      </SafeAreaView>
     );
   }
 

@@ -22,6 +22,11 @@ function RootNavigator() {
   const inAuthGroup = segments[0] === '(auth)';
   const inOnboarding = segments[0] === 'onboarding';
 
+  // Redirect away from onboarding when not logged in
+  if (!session && inOnboarding) {
+    return <Redirect href="/(tabs)/home" />;
+  }
+
   // Allow guests to browse (tabs) — only redirect when needed
   if (session && (!profile || !profile.first_name) && !inOnboarding) {
     return <Redirect href="/onboarding" />;

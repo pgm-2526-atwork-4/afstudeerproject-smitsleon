@@ -30,14 +30,14 @@ export function AuthWall({
 
         <TouchableOpacity
           style={styles.primaryButton}
-          onPress={() => router.push('/(auth)/login')}
+          onPress={() => router.push('/(tabs)/profile')}
         >
           <Text style={styles.primaryButtonText}>Inloggen</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryButton}
-          onPress={() => router.push('/(auth)/register')}
+          onPress={() => router.push('/(tabs)/register')}
         >
           <Text style={styles.secondaryButtonText}>Account aanmaken</Text>
         </TouchableOpacity>
