@@ -61,7 +61,8 @@ export default function MyConcertsScreen() {
     const { data: eventRows } = await supabase
       .from('events')
       .select('*')
-      .in('id', eventIds);
+      .in('id', eventIds)
+      .gte('date', new Date().toISOString());
 
     const mapped: ConcertItem[] = (eventRows ?? []).map((e: any) => ({
       id: e.id,
