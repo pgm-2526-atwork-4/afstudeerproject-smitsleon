@@ -4,7 +4,7 @@
     "slug": "concert-buddy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo/logo-green.png",
+    "icon": "./assets/logo/logo-green-square.png",
     "scheme": "concertbuddy",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -14,7 +14,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#000000",
-        "foregroundImage": "./assets/logo/logo-green.png"
+        "foregroundImage": "./assets/logo/adaptive-icon.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -38,13 +38,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/logo/logo-green.png",
-          "imageWidth": 200,
+          "image": "./assets/logo/logo-green-square.png",
+          "imageWidth": 100,
           "resizeMode": "contain",
           "backgroundColor": "#000000",
           "dark": {
-            "image": "./assets/logo/logo-green.png",
-            "imageWidth": 200,
+            "image": "./assets/logo/logo-green-square.png",
+            "imageWidth": 100,
             "resizeMode": "contain",
             "backgroundColor": "#000000"
           }
