@@ -26,7 +26,7 @@ import {
 
 export default function ConcertDetailScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [event, setEvent] = useState<Event | null>(null);
@@ -188,6 +188,26 @@ export default function ConcertDetailScreen() {
         .single();
       if (groupError || !group) { Alert.alert('Fout', 'Groep aanmaken mislukt. Probeer opnieuw.'); setCreating(false); return; }
       await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id, role: 'admin' });
+
+      // Notify all buddies of the creator
+      const creatorName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : 'Iemand';
+      const { data: buddyRows } = await supabase
+        .from('buddies')
+        .select('user_id_1, user_id_2')
+        .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
+      if (buddyRows && buddyRows.length > 0) {
+        const buddyIds = buddyRows.map((b: any) => b.user_id_1 === user.id ? b.user_id_2 : b.user_id_1);
+        await supabase.from('notifications').insert(
+          buddyIds.map((buddyId: string) => ({
+            user_id: buddyId,
+            type: 'buddy_group_created',
+            title: group.title,
+            body: `${creatorName} heeft een nieuwe groep aangemaakt voor ${event?.name ?? 'een concert'}`,
+            data: { group_id: group.id, creator_user_id: user.id, event_id: id, event_name: event?.name },
+          }))
+        );
+      }
+
       setGroupTitle(''); setGroupDescription(''); setGroupMaxMembers(6);
       setModalVisible(false);
       await fetchGroups();

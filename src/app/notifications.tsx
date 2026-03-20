@@ -42,6 +42,10 @@ interface NotifItem {
   joiner_first_name?: string;
   joiner_last_name?: string;
   joiner_avatar_url?: string | null;
+  // Populated for buddy_group_created notifications
+  creator_first_name?: string;
+  creator_last_name?: string;
+  creator_avatar_url?: string | null;
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -61,6 +65,7 @@ function typeIcon(type: string): { name: keyof typeof Ionicons.glyphMap; color: 
   switch (type) {
     case 'buddy_accepted': return { name: 'people', color: Colors.primary };
     case 'group_joined': return { name: 'person-add', color: Colors.primary };
+    case 'buddy_group_created': return { name: 'people-circle', color: Colors.primary };
     default: return { name: 'notifications', color: Colors.textSecondary };
   }
 }
@@ -113,6 +118,9 @@ export default function NotificationsScreen() {
       ...(notifsRes.data ?? [])
         .filter((n: any) => n.type === 'group_joined' && n.data?.joiner_user_id)
         .map((n: any) => n.data.joiner_user_id as string),
+      ...(notifsRes.data ?? [])
+        .filter((n: any) => n.type === 'buddy_group_created' && n.data?.creator_user_id)
+        .map((n: any) => n.data.creator_user_id as string),
     ]));
     if (extraUserIds.length > 0) {
       const { data: extraUsers } = await supabase
@@ -131,6 +139,9 @@ export default function NotificationsScreen() {
       const joiner = row.type === 'group_joined' && row.data?.joiner_user_id
         ? userInfoMap[row.data.joiner_user_id]
         : undefined;
+      const creator = row.type === 'buddy_group_created' && row.data?.creator_user_id
+        ? userInfoMap[row.data.creator_user_id]
+        : undefined;
       return {
         id: `n-${row.id}`,
         itemType: 'notification',
@@ -146,6 +157,9 @@ export default function NotificationsScreen() {
         joiner_first_name: joiner?.first_name,
         joiner_last_name: joiner?.last_name,
         joiner_avatar_url: joiner?.avatar_url ?? null,
+        creator_first_name: creator?.first_name,
+        creator_last_name: creator?.last_name,
+        creator_avatar_url: creator?.avatar_url ?? null,
       };
     });
 
@@ -331,6 +345,59 @@ export default function NotificationsScreen() {
             <View style={styles.cardText}>
               <Text style={styles.cardName}>
                 {item.joiner_first_name} {item.joiner_last_name}
+              </Text>
+              <Text style={styles.neutralMsg}>{item.body}</Text>
+              <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
+    // App notification — buddy_group_created
+    if (item.type === 'buddy_group_created') {
+      const groupId = item.data?.group_id;
+      return (
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.7}
+          onPress={async () => {
+            if (!groupId) return;
+            const { data: g } = await supabase
+              .from('groups')
+              .select(`id, title, description, max_members, created_by, event_id, events(name, image_url, date, location_name)`)
+              .eq('id', groupId)
+              .single();
+            if (g) {
+              const ev = Array.isArray(g.events) ? g.events[0] : g.events;
+              router.push({
+                pathname: '/group/[id]',
+                params: {
+                  id: g.id,
+                  title: g.title,
+                  description: g.description ?? '',
+                  max_members: String(g.max_members ?? 6),
+                  created_by: g.created_by ?? '',
+                  event_id: g.event_id ?? '',
+                  event_name: ev?.name ?? '',
+                  event_image_url: ev?.image_url ?? '',
+                  event_date: ev?.date ?? '',
+                  event_location: ev?.location_name ?? '',
+                },
+              });
+            }
+          }}
+        >
+          {isUnread && <View style={styles.unreadDot} />}
+          <View style={styles.cardInfo}>
+            <UserAvatar
+              uri={item.creator_avatar_url ?? null}
+              initials={`${(item.creator_first_name ?? '')[0] ?? ''}${(item.creator_last_name ?? '')[0] ?? ''}`.toUpperCase()}
+              size={48}
+            />
+            <View style={styles.cardText}>
+              <Text style={styles.cardName}>
+                {item.creator_first_name} {item.creator_last_name}
               </Text>
               <Text style={styles.neutralMsg}>{item.body}</Text>
               <Text style={styles.timeText}>{formatTimeAgo(item.created_at)}</Text>
