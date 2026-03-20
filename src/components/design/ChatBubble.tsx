@@ -6,7 +6,7 @@ import { Image, Linking, Modal, Platform, Pressable, StyleSheet, Text, Touchable
 const LOCATION_REGEX = /^📍\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/;
 const LIVE_LOCATION_REGEX = /^📍LIVE:(.+)$/;
 const IMAGE_REGEX = /^📷\s+(https?:\/\/.+)$/;
-export const SYSTEM_REGEX = /^🔔\s+(.+)$/;
+export const SYSTEM_REGEX = /^\[sys\]\s*(.+)$/;
 
 function openInMaps(lat: number, lng: number) {
   const url = Platform.select({

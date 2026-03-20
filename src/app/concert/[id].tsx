@@ -234,7 +234,7 @@ export default function ConcertDetailScreen() {
       await supabase.from('messages').insert({
         group_id: group.id,
         user_id: user.id,
-        content: `🔔 ${joinerFirstName} heeft zich aangesloten bij de groep`,
+        content: `[sys] ${joinerFirstName} heeft zich aangesloten bij de groep`,
       });
       if (membersRes.data && membersRes.data.length > 0) {
         const joinerName = joinerRes.data

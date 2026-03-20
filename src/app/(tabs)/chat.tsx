@@ -8,14 +8,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -321,6 +321,8 @@ export default function ChatScreen() {
                 ) : null}
                 {item.last_message.startsWith('📷 ')
                   ? 'Heeft een afbeelding gestuurd'
+                  : item.last_message.startsWith('[sys] ')
+                  ? item.last_message.slice(6)
                   : item.last_message}
               </Text>
             ) : (
