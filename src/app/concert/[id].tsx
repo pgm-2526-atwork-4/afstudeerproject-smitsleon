@@ -565,6 +565,7 @@ const styles = StyleSheet.create({
   groupsSection: {
     padding: Spacing.lg,
     marginTop: Spacing.md,
+    paddingBottom: Spacing.lg * 3,
   },
   groupsHeader: {
     flexDirection: 'row',
