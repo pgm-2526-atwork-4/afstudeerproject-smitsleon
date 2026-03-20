@@ -1,5 +1,6 @@
 import type { DbArtist } from '../lib/types';
 import FormField from './FormField';
+import ImageUpload from './ImageUpload';
 
 interface Props {
   artist: DbArtist;
@@ -21,11 +22,10 @@ export default function ArtistFormFields({ artist, onChange }: Props) {
         onChange={(v) => onChange({ ...artist, genre: v || null })}
         placeholder="Bijv. Rock, Pop, Hip-hop"
       />
-      <FormField
-        label="Afbeelding URL"
-        value={artist.image_url ?? ''}
-        onChange={(v) => onChange({ ...artist, image_url: v || null })}
-        placeholder="https://..."
+      <ImageUpload
+        value={artist.image_url}
+        folder="artists"
+        onChange={(url) => onChange({ ...artist, image_url: url })}
       />
     </>
   );

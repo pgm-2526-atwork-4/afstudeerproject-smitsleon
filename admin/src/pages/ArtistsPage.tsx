@@ -143,10 +143,6 @@ export default function ArtistsPage() {
 
             <div className="space-y-3">
               <ArtistFormFields artist={creating} onChange={(a) => setCreating(a)} />
-
-              {creating.image_url && (
-                <img src={creating.image_url} alt="Preview" className="h-20 w-20 rounded-full object-cover mx-auto" />
-              )}
             </div>
 
             <div className="flex gap-2 mt-6">

@@ -1,5 +1,6 @@
 import type { DbVenue } from '../lib/types';
 import FormField from './FormField';
+import ImageUpload from './ImageUpload';
 
 interface Props {
   venue: DbVenue;
@@ -27,11 +28,10 @@ export default function VenueFormFields({ venue, onChange }: Props) {
         onChange={(v) => onChange({ ...venue, address: v || null })}
         placeholder="Straat en nummer"
       />
-      <FormField
-        label="Afbeelding URL"
-        value={venue.image_url ?? ''}
-        onChange={(v) => onChange({ ...venue, image_url: v || null })}
-        placeholder="https://..."
+      <ImageUpload
+        value={venue.image_url}
+        folder="venues"
+        onChange={(url) => onChange({ ...venue, image_url: url })}
       />
       <div className="grid grid-cols-2 gap-3">
         <FormField

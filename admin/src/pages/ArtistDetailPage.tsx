@@ -102,17 +102,6 @@ export default function ArtistDetailPage() {
           <div className="bg-cb-surface border border-cb-border rounded-xl p-5 space-y-4">
             <h2 className="text-lg font-semibold">Artiest bewerken</h2>
 
-            {/* Avatar preview */}
-            <div className="flex justify-center">
-              {artist.image_url ? (
-                <img src={artist.image_url} alt={artist.name} className="h-24 w-24 rounded-full object-cover" />
-              ) : (
-                <div className="h-24 w-24 rounded-full bg-cb-surface-light flex items-center justify-center text-2xl text-cb-text-muted">
-                  {artist.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-
             <div className="space-y-3">
               <ArtistFormFields artist={artist} onChange={(a) => setArtist(a)} />
             </div>

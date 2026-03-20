@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabaseAdmin } from '../lib/supabase';
 import type { DbArtist, DbEvent, DbVenue } from '../lib/types';
 import FormField from './FormField';
+import ImageUpload from './ImageUpload';
 import Modal from './Modal';
 
 interface Props {
@@ -128,7 +129,11 @@ export default function EventEditModal({ event, isNew, onClose, onSaved }: Props
           ) : null;
         })()}
 
-        {field('Afbeelding URL', 'image_url', { placeholder: 'https://...' })}
+        <ImageUpload
+          value={editing.image_url}
+          folder="events"
+          onChange={(url) => setEditing((prev) => ({ ...prev, image_url: url }))}
+        />
         {field('Ticket URL', 'url', { placeholder: 'https://...' })}
 
         {/* Artiesten */}
