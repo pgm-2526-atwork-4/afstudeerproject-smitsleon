@@ -183,7 +183,7 @@ export default function GroupDetailScreen() {
             await supabase.from('messages').insert({
               group_id: params.id,
               user_id: user.id,
-              content: `${displayName} heeft de groep verlaten`,
+              content: `🔔 ${displayName} heeft de groep verlaten`,
             });
             const { error } = await supabase
               .from('group_members')
@@ -223,7 +223,7 @@ export default function GroupDetailScreen() {
       await supabase.from('messages').insert({
         group_id: params.id,
         user_id: user.id,
-        content: `${displayName} heeft zich aangesloten bij de groep`,
+        content: `🔔 ${displayName} heeft zich aangesloten bij de groep`,
       });
       await fetchMembers();
     }
@@ -359,7 +359,7 @@ export default function GroupDetailScreen() {
               await supabase.from('messages').insert({
                 group_id: params.id,
                 user_id: user!.id,
-                content: `${member.first_name} is verwijderd uit de groep door ${adminName}`,
+                content: `🔔 ${member.first_name} is verwijderd uit de groep door ${adminName}`,
               });
               await fetchMembers();
             }
