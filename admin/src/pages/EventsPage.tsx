@@ -91,18 +91,20 @@ export default function EventsPage() {
     if (!editing || !editing.name.trim()) return;
     setSaving(true);
 
+    const venue = venues.find((v) => v.id === editing.venue_id);
+
     const row = {
       id: editing.id,
       name: editing.name.trim(),
       date: editing.date || null,
       time: editing.time || null,
-      location_name: editing.location_name || null,
       venue_id: editing.venue_id || null,
-      city: editing.city || null,
+      location_name: venue?.name ?? null,
+      city: venue?.city ?? null,
+      latitude: venue?.latitude ?? null,
+      longitude: venue?.longitude ?? null,
       image_url: editing.image_url || null,
       url: editing.url || null,
-      latitude: editing.latitude,
-      longitude: editing.longitude,
     };
 
     if (isNew) {
@@ -185,7 +187,7 @@ export default function EventsPage() {
                   <td className="px-4 py-3 text-cb-text-secondary">
                     {ev.date ? new Date(ev.date).toLocaleDateString('nl-BE') : '—'}
                   </td>
-                  <td className="px-4 py-3 text-cb-text-secondary">{ev.location_name ?? '—'}</td>
+                  <td className="px-4 py-3 text-cb-text-secondary">{venues.find((v) => v.id === ev.venue_id)?.name ?? ev.location_name ?? '—'}</td>
                   <td className="px-4 py-3 text-cb-text-secondary">{ev.city ?? '—'}</td>
                   <td className="px-4 py-3 text-right space-x-3">
                     <button onClick={() => openEdit(ev)} className="text-cb-primary hover:underline cursor-pointer text-xs">Bewerken</button>
@@ -219,15 +221,7 @@ export default function EventsPage() {
                 <select
                   value={editing.venue_id ?? ''}
                   onChange={(e) => {
-                    const v = venues.find((v) => v.id === e.target.value);
-                    setEditing((prev) => prev ? {
-                      ...prev,
-                      venue_id: e.target.value || null,
-                      location_name: v?.name ?? prev.location_name,
-                      city: v?.city ?? prev.city,
-                      latitude: v?.latitude ?? prev.latitude,
-                      longitude: v?.longitude ?? prev.longitude,
-                    } : prev);
+                    setEditing((prev) => prev ? { ...prev, venue_id: e.target.value || null } : prev);
                   }}
                   className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
                 >
@@ -238,27 +232,21 @@ export default function EventsPage() {
                 </select>
               </div>
 
-              {field('Locatienaam', 'location_name', { placeholder: 'Bijv. Sportpaleis' })}
-              {field('Stad', 'city', { placeholder: 'Bijv. Antwerpen' })}
+              {/* Stad (read-only, afgeleid van venue) */}
+              {(() => {
+                const selectedVenue = venues.find((v) => v.id === editing.venue_id);
+                return selectedVenue?.city ? (
+                  <div>
+                    <label className="block text-xs text-cb-text-muted mb-1">Stad</label>
+                    <p className="rounded-lg bg-cb-surface-light/50 border border-cb-border px-3 py-2 text-sm text-cb-text-secondary">
+                      {selectedVenue.city}
+                    </p>
+                  </div>
+                ) : null;
+              })()}
+
               {field('Afbeelding URL', 'image_url', { placeholder: 'https://...' })}
               {field('Ticket URL', 'url', { placeholder: 'https://...' })}
-
-              <div className="grid grid-cols-2 gap-3">
-                <FormField
-                  label="Latitude"
-                  type="number"
-                  step="any"
-                  value={editing.latitude ?? ''}
-                  onChange={(v) => setEditing((prev) => prev ? { ...prev, latitude: v ? parseFloat(v) : null } : prev)}
-                />
-                <FormField
-                  label="Longitude"
-                  type="number"
-                  step="any"
-                  value={editing.longitude ?? ''}
-                  onChange={(v) => setEditing((prev) => prev ? { ...prev, longitude: v ? parseFloat(v) : null } : prev)}
-                />
-              </div>
 
               {/* Artiesten */}
               <div>
