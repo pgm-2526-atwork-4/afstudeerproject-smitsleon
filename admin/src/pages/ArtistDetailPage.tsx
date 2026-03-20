@@ -15,7 +15,7 @@ export default function ArtistDetailPage() {
   const [loading, setLoading] = useState(true);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<DbEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<{ event: DbEvent; isNew: boolean } | null>(null);
 
   const now = new Date();
   const upcomingEvents = events.filter((e) => !e.date || new Date(e.date) >= now);
@@ -127,16 +127,25 @@ export default function ArtistDetailPage() {
         {/* Events overview */}
         <div className="lg:col-span-2">
           <div className="bg-cb-surface border border-cb-border rounded-xl p-5">
-            <h2 className="text-lg font-semibold mb-4">Events ({upcomingEvents.length})</h2>
-            <EventList events={upcomingEvents} loading={eventsLoading} onEdit={(ev) => setEditingEvent(ev)} />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Events ({upcomingEvents.length})</h2>
+              <button
+                onClick={() => setEditingEvent({ event: { id: crypto.randomUUID(), name: '', date: '', location_name: '', image_url: '', venue_id: '', city: '', time: '', url: '', latitude: null, longitude: null, created_at: '' }, isNew: true })}
+                className="rounded-lg bg-cb-primary hover:bg-cb-primary-dark px-3 py-1.5 text-xs font-medium text-white transition-colors cursor-pointer"
+              >
+                + Event
+              </button>
+            </div>
+            <EventList events={upcomingEvents} loading={eventsLoading} onEdit={(ev) => setEditingEvent({ event: ev, isNew: false })} />
           </div>
         </div>
       </div>
 
       {editingEvent && (
         <EventEditModal
-          event={editingEvent}
-          isNew={false}
+          event={editingEvent.event}
+          isNew={editingEvent.isNew}
+          lockedArtistId={id}
           onClose={() => setEditingEvent(null)}
           onSaved={() => { setEditingEvent(null); fetchEvents(); }}
         />

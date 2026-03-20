@@ -10,9 +10,11 @@ interface Props {
   isNew: boolean;
   onClose: () => void;
   onSaved: () => void;
+  lockedVenueId?: string;
+  lockedArtistId?: string;
 }
 
-export default function EventEditModal({ event, isNew, onClose, onSaved }: Props) {
+export default function EventEditModal({ event, isNew, onClose, onSaved, lockedVenueId, lockedArtistId }: Props) {
   const [editing, setEditing] = useState<DbEvent>({ ...event });
   const [venues, setVenues] = useState<DbVenue[]>([]);
   const [artists, setArtists] = useState<DbArtist[]>([]);
@@ -30,13 +32,16 @@ export default function EventEditModal({ event, isNew, onClose, onSaved }: Props
   }, []);
 
   const loadLinkedArtists = useCallback(async () => {
-    if (isNew) return;
+    if (isNew) {
+      if (lockedArtistId) setSelectedArtistIds(new Set([lockedArtistId]));
+      return;
+    }
     const { data } = await supabaseAdmin
       .from('event_artists')
       .select('artist_id')
       .eq('event_id', event.id);
     setSelectedArtistIds(new Set((data ?? []).map((r: { artist_id: string }) => r.artist_id)));
-  }, [event.id, isNew]);
+  }, [event.id, isNew, lockedArtistId]);
 
   useEffect(() => { loadLinkedArtists(); }, [loadLinkedArtists]);
 
@@ -107,7 +112,8 @@ export default function EventEditModal({ event, isNew, onClose, onSaved }: Props
           <select
             value={editing.venue_id ?? ''}
             onChange={(e) => setEditing((prev) => ({ ...prev, venue_id: e.target.value || null }))}
-            className="w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text focus:outline-none focus:ring-2 focus:ring-cb-primary/50"
+            disabled={!!lockedVenueId}
+            className={`w-full rounded-lg bg-cb-surface-light border border-cb-border px-3 py-2 text-sm text-cb-text focus:outline-none focus:ring-2 focus:ring-cb-primary/50${lockedVenueId ? ' opacity-60 cursor-not-allowed' : ''}`}
           >
             <option value="">— Selecteer venue —</option>
             {venues.map((v) => (
@@ -146,11 +152,13 @@ export default function EventEditModal({ event, isNew, onClose, onSaved }: Props
                 return (
                   <span key={aid} className="inline-flex items-center gap-1 rounded-full bg-cb-primary/15 border border-cb-primary/30 px-2.5 py-1 text-xs text-cb-primary">
                     {a?.name ?? aid}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedArtistIds((prev) => { const n = new Set(prev); n.delete(aid); return n; })}
-                      className="hover:text-cb-error cursor-pointer"
-                    >×</button>
+                    {aid !== lockedArtistId && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedArtistIds((prev) => { const n = new Set(prev); n.delete(aid); return n; })}
+                        className="hover:text-cb-error cursor-pointer"
+                      >×</button>
+                    )}
                   </span>
                 );
               })}
