@@ -350,7 +350,7 @@ export default function OnboardingScreen() {
               <View style={styles.switchRow}>
                 <View style={styles.switchInfo}>
                   <Text style={styles.switchLabel}>Toon op profiel</Text>
-                  <Text style={styles.switchHelp}>Anderen zien je stad</Text>
+                  <Text style={styles.switchHelp}>Anderen zien je locatie</Text>
                 </View>
                 <Switch 
                   value={shareLocation} 
