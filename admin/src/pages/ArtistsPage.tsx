@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import FormField from '../components/FormField';
+import { useNavigate } from 'react-router-dom';
+import ArtistFormFields from '../components/ArtistFormFields';
 import Modal from '../components/Modal';
 import PageHeader from '../components/PageHeader';
 import Pagination from '../components/Pagination';
@@ -11,11 +12,11 @@ import type { DbArtist } from '../lib/types';
 const EMPTY: DbArtist = { id: '', name: '', image_url: null, genre: null, created_at: '' };
 
 export default function ArtistsPage() {
+  const navigate = useNavigate();
   const [artists, setArtists] = useState<DbArtist[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState<DbArtist | null>(null);
-  const [isNew, setIsNew] = useState(false);
+  const [creating, setCreating] = useState<DbArtist | null>(null);
   const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 20;
@@ -40,34 +41,22 @@ export default function ArtistsPage() {
   useEffect(() => { fetchArtists(); }, [fetchArtists]);
 
   function openNew() {
-    setEditing({ ...EMPTY, id: crypto.randomUUID() });
-    setIsNew(true);
+    setCreating({ ...EMPTY, id: crypto.randomUUID() });
   }
 
-  function openEdit(artist: DbArtist) {
-    setEditing({ ...artist });
-    setIsNew(false);
-  }
-
-  async function handleSave() {
-    if (!editing || !editing.name.trim()) return;
+  async function handleCreate() {
+    if (!creating || !creating.name.trim()) return;
     setSaving(true);
 
-    const row = {
-      id: editing.id,
-      name: editing.name.trim(),
-      image_url: editing.image_url || null,
-      genre: editing.genre || null,
-    };
-
-    if (isNew) {
-      await supabaseAdmin.from('artists').insert(row);
-    } else {
-      await supabaseAdmin.from('artists').update(row).eq('id', editing.id);
-    }
+    await supabaseAdmin.from('artists').insert({
+      id: creating.id,
+      name: creating.name.trim(),
+      image_url: creating.image_url || null,
+      genre: creating.genre || null,
+    });
 
     setSaving(false);
-    setEditing(null);
+    setCreating(null);
     fetchArtists();
   }
 
@@ -114,7 +103,11 @@ export default function ArtistsPage() {
             </thead>
             <tbody className="divide-y divide-cb-border">
               {artists.map((a) => (
-                <tr key={a.id} className="hover:bg-cb-surface-light/50 transition-colors">
+                <tr
+                  key={a.id}
+                  onClick={() => navigate(`/artists/${a.id}`)}
+                  className="hover:bg-cb-surface-light/50 transition-colors cursor-pointer"
+                >
                   <td className="px-4 py-3">
                     {a.image_url ? (
                       <img src={a.image_url} alt={a.name} className="h-10 w-10 rounded-full object-cover" />
@@ -126,9 +119,13 @@ export default function ArtistsPage() {
                   </td>
                   <td className="px-4 py-3 font-medium">{a.name}</td>
                   <td className="px-4 py-3 text-cb-text-secondary">{a.genre ?? '—'}</td>
-                  <td className="px-4 py-3 text-right space-x-3">
-                    <button onClick={() => openEdit(a)} className="text-cb-primary hover:underline cursor-pointer text-xs">Bewerken</button>
-                    <button onClick={() => handleDelete(a.id)} className="text-cb-error hover:underline cursor-pointer text-xs">Verwijderen</button>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(a.id); }}
+                      className="text-cb-error hover:underline cursor-pointer text-xs"
+                    >
+                      Verwijderen
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -139,48 +136,29 @@ export default function ArtistsPage() {
 
       <Pagination page={page} pageSize={PAGE_SIZE} count={artists.length} onPageChange={setPage} />
 
-      {/* Edit/Create modal */}
-      {editing && (
-        <Modal onClose={() => setEditing(null)}>
-            <h2 className="text-lg font-semibold mb-4">{isNew ? 'Artiest toevoegen' : 'Artiest bewerken'}</h2>
+      {/* Create modal */}
+      {creating && (
+        <Modal onClose={() => setCreating(null)}>
+            <h2 className="text-lg font-semibold mb-4">Artiest toevoegen</h2>
 
             <div className="space-y-3">
-              <FormField
-                label="Naam *"
-                value={editing.name}
-                onChange={(v) => setEditing((prev) => prev ? { ...prev, name: v } : prev)}
-                placeholder="Artiestennaam"
-              />
-              <FormField
-                label="Genre"
-                value={editing.genre ?? ''}
-                onChange={(v) => setEditing((prev) => prev ? { ...prev, genre: v || null } : prev)}
-                placeholder="Bijv. Rock, Pop, Hip-hop"
-              />
-              <FormField
-                label="Afbeelding URL"
-                value={editing.image_url ?? ''}
-                onChange={(v) => setEditing((prev) => prev ? { ...prev, image_url: v || null } : prev)}
-                placeholder="https://..."
-              />
+              <ArtistFormFields artist={creating} onChange={(a) => setCreating(a)} />
 
-              {/* Image preview */}
-              {editing.image_url && (
-                <img src={editing.image_url} alt="Preview" className="h-20 w-20 rounded-full object-cover mx-auto" />
+              {creating.image_url && (
+                <img src={creating.image_url} alt="Preview" className="h-20 w-20 rounded-full object-cover mx-auto" />
               )}
             </div>
 
-            {/* Actions */}
             <div className="flex gap-2 mt-6">
               <button
-                onClick={handleSave}
-                disabled={saving || !editing.name.trim()}
+                onClick={handleCreate}
+                disabled={saving || !creating.name.trim()}
                 className="flex-1 rounded-lg bg-cb-primary hover:bg-cb-primary-dark disabled:opacity-50 px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer"
               >
-                {saving ? 'Opslaan...' : 'Opslaan'}
+                {saving ? 'Toevoegen...' : 'Toevoegen'}
               </button>
               <button
-                onClick={() => setEditing(null)}
+                onClick={() => setCreating(null)}
                 className="rounded-lg bg-cb-surface-light hover:bg-cb-border px-4 py-2 text-sm text-cb-text-secondary transition-colors cursor-pointer"
               >
                 Annuleren
