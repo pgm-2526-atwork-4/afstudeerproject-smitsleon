@@ -247,7 +247,7 @@ export default function HomeScreen() {
           <Image source={require('../../../assets/logo/logo-green.png')} style={styles.headerLogo} />
           <Text style={styles.title}>Concert Buddy</Text>
         </View>
-        {user && (
+        {user ? (
         <TouchableOpacity style={styles.notificationButton} onPress={() => router.push('/notifications')}>
           <Ionicons name="notifications-outline" size={24} color={Colors.text} />
           {unreadCount > 0 && (
@@ -255,6 +255,10 @@ export default function HomeScreen() {
               <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
             </View>
           )}
+        </TouchableOpacity>
+        ) : (
+        <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/(tabs)/profile')}>
+          <Text style={styles.loginButtonText}>Log in</Text>
         </TouchableOpacity>
         )}
       </View>
@@ -576,6 +580,16 @@ const styles = StyleSheet.create({
   headerLogo: { width: 28, height: 28, resizeMode: 'contain' },
   title: { color: Colors.text, fontSize: FontSizes.xxl, fontWeight: 'bold' },
   notificationButton: { position: 'relative', padding: Spacing.xs },
+  loginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.sm,
+  },
+  loginButtonText: { color: Colors.text, fontSize: FontSizes.sm, fontWeight: '600' },
   badge: {
     position: 'absolute',
     top: 0,
