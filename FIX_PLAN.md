@@ -203,9 +203,9 @@
 **Probleem:** De resterende items uit het originele refactorplan.
 
 **Actie:**
-- [ ] **10a:** Voeg `FavouritesScreen` toe aan `src/components/design/index.ts` barrel export
-- [ ] **10b:** Vervang `require('../../../assets/logo/logo-green.png')` in `LoginForm.tsx` door `@/` alias
-- [ ] **10c:** Maak `src/core/constants/messages.ts` met gedeelde foutmeldingen; vervang hardcoded strings in `concert/[id].tsx` en `group/[id].tsx`
+- [x] **10a:** Voeg `FavouritesScreen` toe aan `src/components/design/index.ts` barrel export
+- [x] **10b:** ~~Vervang `require('../../../assets/logo/logo-green.png')` in `LoginForm.tsx` door `@/` alias~~ — N.v.t.: `@/` mapt naar `./src/*` en `assets/` staat in de project root; het relatieve pad is correct.
+- [x] **10c:** `src/core/messages.ts` aangemaakt met `MSG` constanten en `errorRetry()` helper; 6 hardcoded Alert.alert-strings in `concert/[id].tsx` en 10 in `group/[id].tsx` vervangen
 - [ ] **10d:** (Geïntegreerd in Stap 6 hierboven)
 
 ---

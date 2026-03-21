@@ -3,6 +3,7 @@ import { MeetingPointModal } from '@/components/design/MeetingPointModal';
 import { Member, MembersList } from '@/components/design/MembersList';
 import { useAuth } from '@/core/AuthContext';
 import { DbGroupWithEvent, GroupMemberUserId, GroupMemberWithUser } from '@/core/database.types';
+import { errorRetry, MSG } from '@/core/messages';
 import { notifyUsers } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -163,7 +164,7 @@ export default function GroupDetailScreen() {
             // No system message needed — group is being deleted
             const { error } = await supabase.from('groups').delete().eq('id', params.id);
             if (error) {
-              Alert.alert('Fout', 'Groep verwijderen mislukt. Probeer opnieuw.');
+              Alert.alert(MSG.ERROR, errorRetry('Groep verwijderen'));
               setLeaving(false);
               return;
             }
@@ -181,7 +182,7 @@ export default function GroupDetailScreen() {
               .eq('group_id', params.id)
               .eq('user_id', user.id);
             if (error) {
-              Alert.alert('Fout', 'Verlaten mislukt. Probeer opnieuw.');
+              Alert.alert(MSG.ERROR, errorRetry('Verlaten'));
               setLeaving(false);
               return;
             }
@@ -195,11 +196,11 @@ export default function GroupDetailScreen() {
 
   async function handleJoinGroup() {
     if (!user) {
-      Alert.alert('Niet ingelogd', 'Log in om deel te nemen aan een groep.');
+      Alert.alert(MSG.NOT_LOGGED_IN, MSG.NOT_LOGGED_IN_JOIN);
       return;
     }
     if (isFull) {
-      Alert.alert('Groep vol', 'Deze groep heeft het maximale aantal leden bereikt.');
+      Alert.alert(MSG.GROUP_FULL, MSG.GROUP_FULL_BODY);
       return;
     }
     setJoining(true);
@@ -207,7 +208,7 @@ export default function GroupDetailScreen() {
       .from('group_members')
       .insert({ group_id: params.id, user_id: user.id });
     if (error) {
-      Alert.alert('Fout', 'Deelnemen mislukt. Probeer opnieuw.');
+      Alert.alert(MSG.ERROR, errorRetry('Deelnemen'));
     } else {
       const displayName = profile?.first_name || 'Iemand';
       await supabase.from('messages').insert({
@@ -255,7 +256,7 @@ export default function GroupDetailScreen() {
       .eq('id', params.id);
 
     if (error) {
-      Alert.alert('Fout', 'Opslaan mislukt. Probeer opnieuw.');
+      Alert.alert(MSG.ERROR, errorRetry('Opslaan'));
     } else {
       setMeetingName(name);
       setShowMeetingPointModal(false);
@@ -282,7 +283,7 @@ export default function GroupDetailScreen() {
       .eq('id', params.id);
 
     if (error) {
-      Alert.alert('Fout', 'Opslaan mislukt. Probeer opnieuw.');
+      Alert.alert(MSG.ERROR, errorRetry('Opslaan'));
     } else {
       setGroupTitle(editTitle.trim());
       setGroupDescription(editDescription.trim());
@@ -332,7 +333,7 @@ export default function GroupDetailScreen() {
       .eq('user_id', member.user_id);
 
     if (error) {
-      Alert.alert('Fout', 'Rol wijzigen mislukt. Probeer opnieuw.');
+      Alert.alert(MSG.ERROR, errorRetry('Rol wijzigen'));
     } else {
       await fetchMembers();
     }
@@ -355,7 +356,7 @@ export default function GroupDetailScreen() {
               .eq('user_id', member.user_id);
 
             if (error) {
-              Alert.alert('Fout', 'Verwijderen mislukt. Probeer opnieuw.');
+              Alert.alert(MSG.ERROR, errorRetry('Verwijderen'));
             } else {
               const adminName = profile?.first_name || 'Een beheerder';
               await supabase.from('messages').insert({

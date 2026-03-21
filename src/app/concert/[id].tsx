@@ -3,6 +3,7 @@ import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { CreateGroupModal } from '@/components/functional/CreateGroupModal';
 import { useAuth } from '@/core/AuthContext';
 import { BuddyPair, EventArtistWithArtist, GroupMemberGroupId, GroupMemberUserId, GroupWithMemberCount } from '@/core/database.types';
+import { errorRetry, MSG } from '@/core/messages';
 import { notifyUsers } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
 import { dbRowToEvent, Event, Group } from '@/core/types';
@@ -164,15 +165,15 @@ export default function ConcertDetailScreen() {
   }
 
   async function handleCreateGroup(title: string, description: string, maxMembers: number) {
-    if (!user) { Alert.alert('Niet ingelogd', 'Log in om een groep aan te maken.'); return; }
-    if (!title.trim()) { Alert.alert('Verplicht veld', 'Geef je groep een naam.'); return; }
+    if (!user) { Alert.alert(MSG.NOT_LOGGED_IN, MSG.NOT_LOGGED_IN_CREATE); return; }
+    if (!title.trim()) { Alert.alert(MSG.REQUIRED_FIELD, MSG.GROUP_NAME_REQUIRED); return; }
     await ensureEventExists();
     const { data: group, error: groupError } = await supabase
       .from('groups')
       .insert({ event_id: id, created_by: user.id, title: title.trim(), description: description.trim() || null, max_members: maxMembers })
       .select()
       .single();
-    if (groupError || !group) { Alert.alert('Fout', 'Groep aanmaken mislukt. Probeer opnieuw.'); return; }
+    if (groupError || !group) { Alert.alert(MSG.ERROR, errorRetry('Groep aanmaken')); return; }
     await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id, role: 'admin' });
 
     // Notify all buddies of the creator
@@ -199,14 +200,14 @@ export default function ConcertDetailScreen() {
   }
 
   async function handleJoinGroup(group: Group) {
-    if (!user) { Alert.alert('Niet ingelogd', 'Log in om deel te nemen aan een groep.'); return; }
+    if (!user) { Alert.alert(MSG.NOT_LOGGED_IN, MSG.NOT_LOGGED_IN_JOIN); return; }
     if (group.is_member) return;
     const memberCount = typeof group.member_count === 'number' ? group.member_count : 0;
-    if (memberCount >= group.max_members) { Alert.alert('Groep vol', 'Deze groep heeft het maximale aantal leden bereikt.'); return; }
+    if (memberCount >= group.max_members) { Alert.alert(MSG.GROUP_FULL, MSG.GROUP_FULL_BODY); return; }
     setJoiningGroupId(group.id);
     const { error } = await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id });
     if (error) {
-      Alert.alert('Fout', 'Deelnemen mislukt. Probeer opnieuw.');
+      Alert.alert(MSG.ERROR, errorRetry('Deelnemen'));
     } else {
       // Notify all other group members
       const [membersRes, joinerRes] = await Promise.all([
