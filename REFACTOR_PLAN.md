@@ -123,10 +123,10 @@
 **Probleem:** ArtistsPage ↔ VenuesPage (~290 regels duplicatie) en ArtistDetailPage ↔ VenueDetailPage (~360 regels duplicatie) bevatten bijna identieke code.
 
 **Actie:**
-- [ ] Maak een generieke `<EntityListPage>` component die geconfigureerd kan worden per entity-type
-- [ ] Maak een generieke `<EntityDetailPage>` component
-- [ ] Refactor ArtistsPage en VenuesPage om de generieke component te gebruiken
-- [ ] Refactor ArtistDetailPage en VenueDetailPage
+- [x] Maak een generieke `<EntityListPage>` component die geconfigureerd kan worden per entity-type
+- [x] Maak een generieke `<EntityDetailPage>` component
+- [x] Refactor ArtistsPage en VenuesPage om de generieke component te gebruiken
+- [x] Refactor ArtistDetailPage en VenueDetailPage
 
 ---
 
