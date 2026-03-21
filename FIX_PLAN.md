@@ -13,10 +13,10 @@
 **Probleem:** `sendPushOnly()` in `src/core/pushNotifications.ts` (regel 127-140) stuurt push notifications rechtstreeks vanuit de client naar `https://exp.host/--/api/v2/push/send`. Dit lekt push tokens naar andere clients en is manipuleerbaar.
 
 **Actie:**
-- [ ] Maak een Supabase Edge Function `send-push` aan die de Expo Push API aanroept
-- [ ] Verplaats de fetch-logica uit `sendPushOnly()` naar die Edge Function
-- [ ] Laat `sendPushOnly()` de Edge Function aanroepen via `supabase.functions.invoke('send-push', { body: { targets } })`
-- [ ] Verwijder de directe `exp.host` fetch uit client-code
+- [x] Maak een Supabase Edge Function `send-push` aan die de Expo Push API aanroept
+- [x] Verplaats de fetch-logica uit `sendPushOnly()` naar die Edge Function
+- [x] Laat `sendPushOnly()` de Edge Function aanroepen via `supabase.functions.invoke('send-push', { body: { targets } })`
+- [x] Verwijder de directe `exp.host` fetch uit client-code
 
 **Bestanden:**
 - `src/core/pushNotifications.ts` — regels 86-150 (sendPushOnly functie)

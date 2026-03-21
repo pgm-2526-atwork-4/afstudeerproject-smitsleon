@@ -91,6 +91,7 @@ export async function notifyUsers(
 /**
  * Send push notifications without creating in-app notification rows.
  * Useful for chat messages and buddy requests which live in their own tables.
+ * Delegates to the server-side Edge Function to keep push tokens private.
  */
 export async function sendPushOnly(
   targets: {
@@ -102,41 +103,9 @@ export async function sendPushOnly(
 ): Promise<void> {
   if (targets.length === 0) return;
 
-  const userIds = [...new Set(targets.map((t) => t.user_id))];
-  const { data: users } = await supabase
-    .from('users')
-    .select('id, push_token')
-    .in('id', userIds)
-    .not('push_token', 'is', null);
-
-  if (!users || users.length === 0) return;
-
-  const tokenMap = new Map<string, string>();
-  for (const u of users) {
-    if (u.push_token) tokenMap.set(u.id, u.push_token as string);
-  }
-
-  const messages = targets
-    .filter((t) => tokenMap.has(t.user_id))
-    .map((t) => ({
-      to: tokenMap.get(t.user_id)!,
-      sound: 'default' as const,
-      title: t.title,
-      body: t.body,
-      data: t.data ?? {},
-    }));
-
-  if (messages.length === 0) return;
-
   try {
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Accept-Encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(messages),
+    await supabase.functions.invoke('send-push', {
+      body: { targets },
     });
   } catch {
     // Silent fail — push delivery should not break the in-app flow
