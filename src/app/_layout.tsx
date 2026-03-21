@@ -93,7 +93,6 @@ function RootNavigator() {
     );
   }
 
-  const inAuthGroup = segments[0] === '(auth)';
   const inOnboarding = segments[0] === 'onboarding';
 
   // Redirect away from onboarding when not logged in
@@ -105,14 +104,13 @@ function RootNavigator() {
   if (session && (!profile || !profile.first_name) && !inOnboarding) {
     return <Redirect href="/onboarding" />;
   }
-  if (session && profile?.first_name && (inAuthGroup || inOnboarding)) {
+  if (session && profile?.first_name && inOnboarding) {
     return <Redirect href="/(tabs)/home" />;
   }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(auth)" />
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="concert/[id]" />
       <Stack.Screen name="group/[id]" />
