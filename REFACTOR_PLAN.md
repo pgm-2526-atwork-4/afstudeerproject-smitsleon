@@ -112,9 +112,9 @@
 **Probleem:** `src/app/(tabs)/chat.tsx` definieert een eigen `formatMessageTime()` terwijl `useChat.ts` al `formatTime()` en `formatDateSeparator()` exporteert die door andere chat-pagina's (group/chat.tsx, private-chat.tsx) correct worden geïmporteerd.
 
 **Actie:**
-- [ ] Verwijder de lokale `formatMessageTime()` uit `chat.tsx`
-- [ ] Importeer en gebruik de bestaande utilities uit `useChat.ts`
-- [ ] Pas de chat-lijst formatting aan zodat het dezelfde helpers gebruikt
+- [x] Verwijder de lokale `formatMessageTime()` uit `chat.tsx`
+- [x] Importeer en gebruik de bestaande utilities uit `useChat.ts`
+- [x] Pas de chat-lijst formatting aan zodat het dezelfde helpers gebruikt
 
 ---
 

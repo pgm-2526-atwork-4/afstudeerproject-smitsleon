@@ -2,20 +2,21 @@ import { AuthWall } from '@/components/design/AuthWall';
 import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
+import { formatMessageTime } from '@/core/useChat';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -221,21 +222,6 @@ export default function ChatScreen() {
       });
     });
   }, [fetchChats]));
-
-  function formatMessageTime(dateStr: string) {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (d.toDateString() === now.toDateString()) {
-      return d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
-    }
-    if (d.toDateString() === yesterday.toDateString()) {
-      return 'Gisteren';
-    }
-    return d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
-  }
 
   async function handlePress(item: ChatItem) {
     await AsyncStorage.setItem(`chat_read:${item.id}`, String(Date.now()));

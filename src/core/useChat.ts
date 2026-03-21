@@ -52,6 +52,17 @@ export function formatDateSeparator(dateStr: string) {
   return d.toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+/** Compact time label for chat list items: time today, "Gisteren", or short date. */
+export function formatMessageTime(dateStr: string) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return formatTime(dateStr);
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'Gisteren';
+  return d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
+}
+
 // ── Hook ───────────────────────────────────────────────
 
 export function useChat(userId: string | undefined, config: ChatConfig) {
