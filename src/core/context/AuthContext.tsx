@@ -143,6 +143,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    const userId = session?.user?.id;
+    if (userId) {
+      await supabase.from('users').update({ push_token: null }).eq('id', userId);
+    }
     await supabase.auth.signOut();
     setProfile(null);
   }
