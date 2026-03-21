@@ -23,15 +23,30 @@ export function FilterModal({ visible, onClose, initialFilters, onApply }: Props
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [showStartDate, setShowStartDate] = useState(false);
   const [showEndDate, setShowEndDate] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Sync state when opened
   React.useEffect(() => {
     if (visible) {
       setFilters(initialFilters);
+      setValidationError(null);
     }
   }, [visible, initialFilters]);
 
   const handleApply = () => {
+    // Date validation
+    if (filters.startDate && filters.endDate && filters.endDate < filters.startDate) {
+      setValidationError('Einddatum mag niet vóór startdatum liggen.');
+      return;
+    }
+    // Group size validation
+    const min = filters.minGroupSize ? parseInt(filters.minGroupSize, 10) : 0;
+    const max = filters.maxGroupSize ? parseInt(filters.maxGroupSize, 10) : Infinity;
+    if (filters.minGroupSize && filters.maxGroupSize && min > max) {
+      setValidationError('Min groepsgrootte mag niet groter zijn dan max.');
+      return;
+    }
+    setValidationError(null);
     onApply(filters);
   };
 
@@ -44,12 +59,19 @@ export function FilterModal({ visible, onClose, initialFilters, onApply }: Props
       endDate: null,
     };
     setFilters(cleared);
+    setValidationError(null);
   };
 
   const onStartDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowStartDate(Platform.OS === 'ios');
     if (selectedDate) {
-      setFilters((prev) => ({ ...prev, startDate: selectedDate }));
+      setFilters((prev) => ({
+        ...prev,
+        startDate: selectedDate,
+        // Auto-clear endDate if it would become invalid
+        endDate: prev.endDate && prev.endDate < selectedDate ? null : prev.endDate,
+      }));
+      setValidationError(null);
     }
   };
 
@@ -57,6 +79,7 @@ export function FilterModal({ visible, onClose, initialFilters, onApply }: Props
     setShowEndDate(Platform.OS === 'ios');
     if (selectedDate) {
       setFilters((prev) => ({ ...prev, endDate: selectedDate }));
+      setValidationError(null);
     }
   };
 
@@ -186,6 +209,11 @@ export function FilterModal({ visible, onClose, initialFilters, onApply }: Props
               </View>
       </View>
 
+      {/* Validation error */}
+      {validationError && (
+        <Text style={styles.errorText}>{validationError}</Text>
+      )}
+
       {/* Actions */}
       <View style={styles.actionRow}>
         <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
@@ -280,6 +308,12 @@ const styles = StyleSheet.create({
   },
   dateTextPlaceholder: {
     color: Colors.textMuted,
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: FontSizes.sm,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
   },
   actionRow: {
     flexDirection: 'row',

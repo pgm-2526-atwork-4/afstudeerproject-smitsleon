@@ -83,9 +83,9 @@
 **Probleem:** Er is geen validatie — einddatum kan vóór startdatum liggen, en `minGroupSize` kan groter zijn dan `maxGroupSize`.
 
 **Actie:**
-- [ ] Voeg datumvalidatie toe: `endDate >= startDate`
-- [ ] Voeg groepsgrootte-validatie toe: `minGroupSize <= maxGroupSize`
-- [ ] Toon duidelijke feedback aan de gebruiker bij ongeldige input
+- [x] Voeg datumvalidatie toe: `endDate >= startDate`
+- [x] Voeg groepsgrootte-validatie toe: `minGroupSize <= maxGroupSize`
+- [x] Toon duidelijke feedback aan de gebruiker bij ongeldige input
 
 ---
 
