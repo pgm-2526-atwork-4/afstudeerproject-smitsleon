@@ -22,7 +22,8 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "package": "com.lsmits.concertbuddy"
+      "package": "com.lsmits.concertbuddy",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -51,7 +52,8 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-location"
+      "expo-location",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

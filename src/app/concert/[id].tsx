@@ -1,6 +1,7 @@
 import { BuddyConcertStatus } from '@/components/design/BuddyConcertStatus';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { useAuth } from '@/core/AuthContext';
+import { notifyUsers } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
 import { dbRowToEvent, Event, Group } from '@/core/types';
 import { useBuddyConcertStatus } from '@/core/useBuddyConcertStatus';
@@ -197,7 +198,7 @@ export default function ConcertDetailScreen() {
         .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
       if (buddyRows && buddyRows.length > 0) {
         const buddyIds = buddyRows.map((b: any) => b.user_id_1 === user.id ? b.user_id_2 : b.user_id_1);
-        await supabase.from('notifications').insert(
+        await notifyUsers(
           buddyIds.map((buddyId: string) => ({
             user_id: buddyId,
             type: 'buddy_group_created',
@@ -240,7 +241,7 @@ export default function ConcertDetailScreen() {
         const joinerName = joinerRes.data
           ? `${joinerRes.data.first_name} ${joinerRes.data.last_name}`
           : 'Iemand';
-        await supabase.from('notifications').insert(
+        await notifyUsers(
           membersRes.data.map((m: any) => ({
             user_id: m.user_id,
             type: 'group_joined',

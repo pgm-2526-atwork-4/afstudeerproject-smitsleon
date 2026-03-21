@@ -1,14 +1,26 @@
 import { AuthProvider, useAuth } from '@/core/AuthContext';
+import '@/core/pushNotifications'; // initialise notification handler early
 import { Colors } from '@/style/theme';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
-import { Redirect, Stack, useSegments } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
   const segments = useSegments();
+  const router = useRouter();
+
+  // Navigate to notifications screen when the user taps a push notification
+  const lastNotificationResponse = Notifications.useLastNotificationResponse();
+  useEffect(() => {
+    if (lastNotificationResponse && session) {
+      router.push('/notifications');
+    }
+  }, [lastNotificationResponse, session, router]);
 
   // Show loading spinner while auth state is being determined
   if (loading) {

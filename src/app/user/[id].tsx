@@ -7,6 +7,7 @@ import { UserAvatar } from '@/components/design/UserAvatar';
 import { VenueChip, VenueChipsGrid } from '@/components/design/VenueChipsGrid';
 import { VibeTags } from '@/components/design/VibeTags';
 import { useAuth } from '@/core/AuthContext';
+import { notifyUsers } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
 import { UserProfile, calculateAge } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -14,15 +15,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type BuddyStatus = 'none' | 'pending_incoming' | 'pending_outgoing' | 'buddies';
@@ -177,13 +178,13 @@ export default function UserProfileScreen() {
       setBuddyStatus('buddies');
       setBuddyCount((c) => c + 1);
       // Notify the requester (id) that their request was accepted
-      await supabase.from('notifications').insert({
-        user_id: id,
+      await notifyUsers([{
+        user_id: id as string,
         type: 'buddy_accepted',
         title: 'Buddy verzoek geaccepteerd',
         body: 'Je buddy verzoek is geaccepteerd! Jullie zijn nu buddies.',
         data: { accepter_user_id: currentUser?.id },
-      });
+      }]);
     }
     setSending(false);
   }

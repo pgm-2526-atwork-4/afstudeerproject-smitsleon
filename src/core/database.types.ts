@@ -18,6 +18,7 @@ export interface DbUser {
   vibe_tags: string[];
   role: 'user' | 'admin';
   blocked_at: string | null;
+  push_token: string | null;
   created_at: string;
 }
 

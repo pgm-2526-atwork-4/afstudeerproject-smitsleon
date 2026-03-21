@@ -1,6 +1,7 @@
 import { Session, User } from '@supabase/supabase-js';
 import { createContext, ReactNode, useContext, useEffect, useRef, useState } from 'react';
 import { resolveCurrentCity } from './location';
+import { registerForPushNotificationsAsync } from './pushNotifications';
 import { supabase } from './supabase';
 import { UserProfile } from './types';
 
@@ -71,6 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(p);
     setLoading(false);
   }
+
+  // Register push token when a valid profile is loaded
+  useEffect(() => {
+    if (!profile?.id) return;
+    registerForPushNotificationsAsync(profile.id);
+  }, [profile?.id]);
 
   // Auto-update location on app start when user has location enabled
   useEffect(() => {

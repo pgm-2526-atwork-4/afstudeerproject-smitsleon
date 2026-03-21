@@ -2,6 +2,7 @@ import { EmptyState } from '@/components/design/EmptyState';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
+import { notifyUsers } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -198,13 +199,13 @@ export default function NotificationsScreen() {
         prev.map((i) => i.id === item.id ? { ...i, localStatus: 'accepted', read: true } : i)
       );
       // Notify the requester
-      await supabase.from('notifications').insert({
-        user_id: item.from_user_id,
+      await notifyUsers([{
+        user_id: item.from_user_id!,
         type: 'buddy_accepted',
         title: 'Buddy verzoek geaccepteerd',
         body: 'Je buddy verzoek is geaccepteerd! Jullie zijn nu buddies.',
         data: { accepter_user_id: user?.id },
-      });
+      }]);
     }
     setProcessingId(null);
   }
