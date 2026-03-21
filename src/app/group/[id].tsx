@@ -2,6 +2,7 @@ import { GroupEditModal } from '@/components/design/GroupEditModal';
 import { MeetingPointModal } from '@/components/design/MeetingPointModal';
 import { Member, MembersList } from '@/components/design/MembersList';
 import { useAuth } from '@/core/AuthContext';
+import { DbGroupWithEvent, GroupMemberUserId, GroupMemberWithUser } from '@/core/database.types';
 import { notifyUsers } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -93,7 +94,7 @@ export default function GroupDetailScreen() {
       console.error('Error fetching members:', error);
     } else {
       setMembers(
-        (data ?? []).map((row: any) => ({
+        ((data ?? []) as unknown as GroupMemberWithUser[]).map((row) => ({
           user_id: row.user_id,
           joined_at: row.joined_at,
           role: row.role ?? 'member',
@@ -124,7 +125,7 @@ export default function GroupDetailScreen() {
           setGroupMaxMembers(data.max_members ?? 6);
           setMeetingName(data.meeting_point_name ?? '');
 
-          const ev = (data as any).events;
+          const ev = (data as unknown as DbGroupWithEvent).events;
           if (ev) {
             if (!params.event_name) setEventName(ev.name ?? '');
             if (!params.event_image_url) setEventImageUrl(ev.image_url ?? '');
@@ -225,7 +226,7 @@ export default function GroupDetailScreen() {
           ? `${profile.first_name} ${profile.last_name}`.trim()
           : 'Iemand';
         await notifyUsers(
-          existingMembers.map((m: any) => ({
+          existingMembers.map((m: GroupMemberUserId) => ({
             user_id: m.user_id,
             type: 'group_joined',
             title: groupTitle,

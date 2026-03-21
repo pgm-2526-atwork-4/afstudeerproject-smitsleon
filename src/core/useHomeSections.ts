@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useAuth } from './AuthContext';
+import { ConcertStatusEventId, DbEvent, FavArtistWithName, FavVenueId, GroupEventId } from './database.types';
 import { supabase } from './supabase';
 import { dbRowToEvent, Event } from './types';
 import { distanceKm, getBuddyIds } from './utils';
@@ -68,7 +69,7 @@ export function useHomeSections() {
         .in('user_id', buddyIds)
         .eq('status', 'going');
 
-      const eventIds = [...new Set((statusRows ?? []).map((r: any) => r.event_id))];
+      const eventIds = [...new Set((statusRows ?? []).map((r: ConcertStatusEventId) => r.event_id))];
       if (eventIds.length === 0) return [];
 
       const { data: eventRows } = await supabase
@@ -93,7 +94,7 @@ export function useHomeSections() {
         .in('user_id', buddyIds)
         .eq('status', 'interested');
 
-      const eventIds = [...new Set((statusRows ?? []).map((r: any) => r.event_id))];
+      const eventIds = [...new Set((statusRows ?? []).map((r: ConcertStatusEventId) => r.event_id))];
       if (eventIds.length === 0) return [];
 
       const { data: eventRows } = await supabase
@@ -115,8 +116,8 @@ export function useHomeSections() {
         .eq('user_id', user.id)
         .limit(3);
 
-      const artistNames = (favRows ?? [])
-        .map((r: any) => r.artists?.name)
+      const artistNames = ((favRows ?? []) as unknown as FavArtistWithName[])
+        .map((r) => r.artists?.name)
         .filter(Boolean) as string[];
       if (artistNames.length === 0) return [];
 
@@ -141,7 +142,7 @@ export function useHomeSections() {
         .select('venue_id')
         .eq('user_id', user.id);
 
-      const venueIds = (favRows ?? []).map((r: any) => r.venue_id).filter(Boolean) as string[];
+      const venueIds = (favRows ?? []).map((r: FavVenueId) => r.venue_id).filter(Boolean) as string[];
       if (venueIds.length === 0) return [];
 
       const { data: rows } = await supabase
@@ -162,7 +163,7 @@ export function useHomeSections() {
         .select('event_id')
         .limit(100);
 
-      const eventIds = [...new Set((groupRows ?? []).map((r: any) => r.event_id))];
+      const eventIds = [...new Set((groupRows ?? []).map((r: GroupEventId) => r.event_id))];
       if (eventIds.length === 0) return [];
 
       const { data: eventRows } = await supabase
@@ -195,7 +196,7 @@ export function useHomeSections() {
 
       // Fine-grained distance filter
       return (rows ?? [])
-        .filter((e: any) =>
+        .filter((e: DbEvent) =>
           e.latitude && e.longitude
             ? distanceKm(profile.latitude!, profile.longitude!, e.latitude, e.longitude) <= NEARBY_RADIUS_KM
             : false

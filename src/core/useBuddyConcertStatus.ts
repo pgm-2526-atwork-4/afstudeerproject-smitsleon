@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ConcertStatusUserStatus, UserBasicInfo } from './database.types';
 import { supabase } from './supabase';
 import { getBuddyIds } from './utils';
 
@@ -31,15 +32,15 @@ export function useBuddyConcertStatus(userId: string | undefined, eventId: strin
 
       if (!statusRows || statusRows.length === 0) { setBuddyStatuses([]); return; }
 
-      const userIds = statusRows.map((r: any) => r.user_id);
+      const userIds = statusRows.map((r: ConcertStatusUserStatus) => r.user_id);
       const { data: userRows } = await supabase
         .from('users')
         .select('id, first_name, last_name, avatar_url')
         .in('id', userIds);
 
-      const userMap = new Map((userRows ?? []).map((u: any) => [u.id, u]));
+      const userMap = new Map((userRows ?? []).map((u: UserBasicInfo) => [u.id, u]));
       setBuddyStatuses(
-        statusRows.map((r: any) => {
+        statusRows.map((r: ConcertStatusUserStatus) => {
           const u = userMap.get(r.user_id);
           return {
             id: r.user_id,

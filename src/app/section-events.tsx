@@ -2,6 +2,7 @@ import { ConcertCard } from '@/components/design/ConcertCard';
 import { EmptyState } from '@/components/design/EmptyState';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { useAuth } from '@/core/AuthContext';
+import { ConcertStatusEventId, DbEvent, FavArtistWithName, FavVenueId, GroupEventId } from '@/core/database.types';
 import { supabase } from '@/core/supabase';
 import { dbRowToEvent, Event, UserProfile } from '@/core/types';
 import { distanceKm, getBuddyIds } from '@/core/utils';
@@ -48,7 +49,7 @@ async function fetchBuddyEvents(
     .select('event_id')
     .in('user_id', buddyIds)
     .eq('status', status);
-  const eventIds = [...new Set((statusRows ?? []).map((r: any) => r.event_id))];
+  const eventIds = [...new Set((statusRows ?? []).map((r: ConcertStatusEventId) => r.event_id))];
   if (eventIds.length === 0) return [];
   const { data } = await supabase
     .from('events')
@@ -65,7 +66,7 @@ async function fetchFavouriteArtists(userId: string, now: string): Promise<Event
     .select('artists(name)')
     .eq('user_id', userId)
     .limit(5);
-  const artistNames = (favRows ?? []).map((r: any) => r.artists?.name).filter(Boolean) as string[];
+  const artistNames = ((favRows ?? []) as unknown as FavArtistWithName[]).map((r) => r.artists?.name).filter(Boolean) as string[];
   if (artistNames.length === 0) return [];
   const filter = artistNames.map((n) => `name.ilike.%${n}%`).join(',');
   const { data } = await supabase
@@ -83,7 +84,7 @@ async function fetchFavouriteVenues(userId: string, now: string): Promise<Event[
     .from('favourite_venues')
     .select('venue_id')
     .eq('user_id', userId);
-  const venueIds = (favVRows ?? []).map((r: any) => r.venue_id).filter(Boolean) as string[];
+  const venueIds = (favVRows ?? []).map((r: FavVenueId) => r.venue_id).filter(Boolean) as string[];
   if (venueIds.length === 0) return [];
   const { data } = await supabase
     .from('events')
@@ -100,7 +101,7 @@ async function fetchWithGroups(now: string): Promise<Event[]> {
     .from('groups')
     .select('event_id')
     .limit(200);
-  const grpEventIds = [...new Set((grpRows ?? []).map((r: any) => r.event_id))];
+  const grpEventIds = [...new Set((grpRows ?? []).map((r: GroupEventId) => r.event_id))];
   if (grpEventIds.length === 0) return [];
   const { data } = await supabase
     .from('events')
@@ -127,7 +128,7 @@ async function fetchNearby(lat: number, lng: number, now: string): Promise<Event
     .order('date', { ascending: true })
     .limit(50);
   return (data ?? [])
-    .filter((e: any) =>
+    .filter((e: DbEvent) =>
       e.latitude && e.longitude
         ? distanceKm(lat, lng, e.latitude, e.longitude) <= radiusKm
         : false

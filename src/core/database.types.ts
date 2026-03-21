@@ -173,10 +173,63 @@ export interface DbMessageWithUser extends DbMessage {
 }
 
 export interface DbGroupWithEvent extends DbGroup {
-  events: Pick<DbEvent, 'name' | 'image_url' | 'date' | 'location_name'> | null;
+  events: Pick<DbEvent, 'name' | 'image_url' | 'date' | 'location_name' | 'city'> | null;
   member_count: { count: number }[];
 }
 
 export interface DbBuddyRequestWithUser extends DbBuddyRequest {
   users: Pick<DbUser, 'first_name' | 'last_name' | 'avatar_url'> | null;
+}
+
+// ── Lightweight pick types for common query patterns ───
+
+/** concert_status row when selecting only event_id */
+export type ConcertStatusEventId = Pick<DbConcertStatus, 'event_id'>;
+
+/** concert_status row when selecting user_id + status */
+export type ConcertStatusUserStatus = Pick<DbConcertStatus, 'user_id' | 'status'>;
+
+/** favourite_artists joined with artists(name) */
+export interface FavArtistWithName {
+  artists: Pick<DbArtist, 'name'> | null;
+}
+
+/** favourite_venues selecting only venue_id */
+export type FavVenueId = Pick<DbFavouriteVenue, 'venue_id'>;
+
+/** groups selecting only event_id */
+export type GroupEventId = Pick<DbGroup, 'event_id'>;
+
+/** group_members selecting only group_id */
+export type GroupMemberGroupId = Pick<DbGroupMember, 'group_id'>;
+
+/** group_members selecting only user_id */
+export type GroupMemberUserId = Pick<DbGroupMember, 'user_id'>;
+
+/** group_members joined with users profile info */
+export interface GroupMemberWithUser {
+  user_id: string;
+  joined_at: string;
+  role: 'admin' | 'member';
+  users: Pick<DbUser, 'first_name' | 'last_name' | 'avatar_url'> | null;
+}
+
+/** event_artists joined with full artist info */
+export interface EventArtistWithArtist {
+  artist_id: string;
+  artists: Pick<DbArtist, 'id' | 'name' | 'image_url' | 'genre'>;
+}
+
+/** buddies row selecting user_id_1, user_id_2 */
+export interface BuddyPair {
+  user_id_1: string;
+  user_id_2: string;
+}
+
+/** users row for buddy status display */
+export type UserBasicInfo = Pick<DbUser, 'id' | 'first_name' | 'last_name' | 'avatar_url'>;
+
+/** groups query result with aggregated member_count */
+export interface GroupWithMemberCount extends DbGroup {
+  member_count: { count: number }[];
 }

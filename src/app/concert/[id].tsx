@@ -1,6 +1,7 @@
 import { BuddyConcertStatus } from '@/components/design/BuddyConcertStatus';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { useAuth } from '@/core/AuthContext';
+import { BuddyPair, EventArtistWithArtist, GroupMemberGroupId, GroupMemberUserId, GroupWithMemberCount } from '@/core/database.types';
 import { notifyUsers } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
 import { dbRowToEvent, Event, Group } from '@/core/types';
@@ -59,7 +60,7 @@ export default function ConcertDetailScreen() {
       if (!cancelled) {
         setEvent(eventRes.data ? dbRowToEvent(eventRes.data) : null);
         setLineupArtists(
-          (artistsRes.data ?? []).map((r: any) => ({
+          ((artistsRes.data ?? []) as unknown as EventArtistWithArtist[]).map((r) => ({
             id: r.artists.id,
             name: r.artists.name,
             image_url: r.artists.image_url,
@@ -112,26 +113,26 @@ export default function ConcertDetailScreen() {
     }
 
     if (user && data && data.length > 0) {
-      const groupIds = data.map((g: any) => g.id);
+      const groupIds = data.map((g: GroupWithMemberCount) => g.id);
       const { data: memberships } = await supabase
         .from('group_members')
         .select('group_id')
         .eq('user_id', user.id)
         .in('group_id', groupIds);
 
-      const memberGroupIds = new Set((memberships ?? []).map((m: any) => m.group_id));
+      const memberGroupIds = new Set((memberships ?? []).map((m: GroupMemberGroupId) => m.group_id));
 
-      setGroups(data.map((g: any) => ({
+      setGroups(data.map((g: GroupWithMemberCount) => ({
         ...g,
         member_count: g.member_count?.[0]?.count ?? 0,
         is_member: memberGroupIds.has(g.id),
-      })));
+      })) as Group[]);
     } else {
-      setGroups((data ?? []).map((g: any) => ({
+      setGroups((data ?? []).map((g: GroupWithMemberCount) => ({
         ...g,
         member_count: g.member_count?.[0]?.count ?? 0,
         is_member: false,
-      })));
+      })) as Group[]);
     }
 
     setLoadingGroups(false);
@@ -197,7 +198,7 @@ export default function ConcertDetailScreen() {
         .select('user_id_1, user_id_2')
         .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
       if (buddyRows && buddyRows.length > 0) {
-        const buddyIds = buddyRows.map((b: any) => b.user_id_1 === user.id ? b.user_id_2 : b.user_id_1);
+        const buddyIds = buddyRows.map((b: BuddyPair) => b.user_id_1 === user.id ? b.user_id_2 : b.user_id_1);
         await notifyUsers(
           buddyIds.map((buddyId: string) => ({
             user_id: buddyId,
@@ -242,7 +243,7 @@ export default function ConcertDetailScreen() {
           ? `${joinerRes.data.first_name} ${joinerRes.data.last_name}`
           : 'Iemand';
         await notifyUsers(
-          membersRes.data.map((m: any) => ({
+          membersRes.data.map((m: GroupMemberUserId) => ({
             user_id: m.user_id,
             type: 'group_joined',
             title: group.title,

@@ -101,9 +101,9 @@
 - `src/app/group/[id].tsx` (3)
 
 **Actie:**
-- [ ] Maak interfaces aan voor veelgebruikte Supabase query results
-- [ ] Gebruik de reeds bestaande types uit `src/core/database.types.ts` waar mogelijk
-- [ ] Vervang `any` casts stap voor stap per bestand
+- [x] Maak interfaces aan voor veelgebruikte Supabase query results
+- [x] Gebruik de reeds bestaande types uit `src/core/database.types.ts` waar mogelijk
+- [x] Vervang `any` casts stap voor stap per bestand
 
 ---
 
