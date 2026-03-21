@@ -46,6 +46,9 @@ export function useHomeSections() {
     setData((prev) => ({ ...prev, loading: true }));
     const now = new Date().toISOString();
 
+    // Pre-fetch buddy IDs once (used by both buddyPromise and buddyInterestedPromise)
+    const buddyIds = user ? await getBuddyIds(user.id) : [];
+
     // 1. Upcoming concerts
     const upcomingPromise = (async (): Promise<Event[]> => {
       const { data: rows } = await supabase
@@ -59,9 +62,7 @@ export function useHomeSections() {
 
     // 2. Buddy events — concerts where buddies marked "going"
     const buddyPromise = (async (): Promise<Event[]> => {
-      if (!user) return [];
-      const buddyIds = await getBuddyIds(user.id);
-      if (buddyIds.length === 0) return [];
+      if (!user || buddyIds.length === 0) return [];
 
       const { data: statusRows } = await supabase
         .from('concert_status')
@@ -84,9 +85,7 @@ export function useHomeSections() {
 
     // 3. Buddy interested events
     const buddyInterestedPromise = (async (): Promise<Event[]> => {
-      if (!user) return [];
-      const buddyIds = await getBuddyIds(user.id);
-      if (buddyIds.length === 0) return [];
+      if (!user || buddyIds.length === 0) return [];
 
       const { data: statusRows } = await supabase
         .from('concert_status')

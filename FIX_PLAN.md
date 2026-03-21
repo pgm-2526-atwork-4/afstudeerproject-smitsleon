@@ -142,8 +142,8 @@
 **Probleem:** `useHomeSections.ts` roept `getBuddyIds(user.id)` twee keer aan (regel 63 en 88) — dit zijn twee identieke netwerkcalls.
 
 **Actie:**
-- [ ] Haal `getBuddyIds()` één keer op vóór de `Promise.all`
-- [ ] Geef het resultaat door aan beide secties (buddyGoing en buddyInterested)
+- [x] Haal `getBuddyIds()` één keer op vóór de `Promise.all`
+- [x] Geef het resultaat door aan beide secties (buddyGoing en buddyInterested)
 
 **Bestanden:**
 - `src/core/useHomeSections.ts` — regels 63 en 88
