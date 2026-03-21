@@ -4,22 +4,13 @@ import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
 import { dbRowToEvent, Event } from '@/core/types';
+import { distanceKm, getBuddyIds } from '@/core/utils';
 import { Colors, FontSizes, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 type SectionType = 'upcoming' | 'buddies' | 'buddyInterested' | 'favouriteArtists' | 'favouriteVenues' | 'withGroups' | 'nearby';
 
@@ -62,13 +53,7 @@ export default function SectionEventsScreen() {
 
       case 'buddies': {
         if (!user) break;
-        const { data: buddyRows } = await supabase
-          .from('buddies')
-          .select('user_id_1, user_id_2')
-          .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
-        const buddyIds = (buddyRows ?? []).map((r: any) =>
-          r.user_id_1 === user.id ? r.user_id_2 : r.user_id_1
-        );
+        const buddyIds = await getBuddyIds(user.id);
         if (buddyIds.length === 0) break;
         const { data: statusRows } = await supabase
           .from('concert_status')
@@ -89,13 +74,7 @@ export default function SectionEventsScreen() {
 
       case 'buddyInterested': {
         if (!user) break;
-        const { data: buddyRows2 } = await supabase
-          .from('buddies')
-          .select('user_id_1, user_id_2')
-          .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
-        const buddyIds2 = (buddyRows2 ?? []).map((r: any) =>
-          r.user_id_1 === user.id ? r.user_id_2 : r.user_id_1
-        );
+        const buddyIds2 = await getBuddyIds(user.id);
         if (buddyIds2.length === 0) break;
         const { data: statusRows2 } = await supabase
           .from('concert_status')

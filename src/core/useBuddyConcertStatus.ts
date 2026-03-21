@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { getBuddyIds } from './utils';
 
 export interface BuddyStatus {
   id: string;
@@ -19,14 +20,7 @@ export function useBuddyConcertStatus(userId: string | undefined, eventId: strin
     if (!userId || !eventId) return;
 
     (async () => {
-      const { data: buddyRows } = await supabase
-        .from('buddies')
-        .select('user_id_1, user_id_2')
-        .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
-
-      const buddyIds = (buddyRows ?? []).map((r: any) =>
-        r.user_id_1 === userId ? r.user_id_2 : r.user_id_1
-      );
+      const buddyIds = await getBuddyIds(userId);
       if (buddyIds.length === 0) { setBuddyStatuses([]); return; }
 
       const { data: statusRows } = await supabase

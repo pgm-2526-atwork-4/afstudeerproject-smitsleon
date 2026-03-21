@@ -3,6 +3,7 @@ import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { UserAvatar } from '@/components/design/UserAvatar';
 import { useAuth } from '@/core/AuthContext';
 import { supabase } from '@/core/supabase';
+import { getBuddyIds } from '@/core/utils';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -45,14 +46,7 @@ export default function BuddiesScreen() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
 
-    const { data } = await supabase
-      .from('buddies')
-      .select('user_id_1, user_id_2')
-      .or(`user_id_1.eq.${targetUserId},user_id_2.eq.${targetUserId}`);
-
-    const buddyIds = (data ?? []).map((row: any) =>
-      row.user_id_1 === targetUserId ? row.user_id_2 : row.user_id_1
-    );
+    const buddyIds = await getBuddyIds(targetUserId);
 
     if (buddyIds.length > 0) {
       const { data: usersData } = await supabase
