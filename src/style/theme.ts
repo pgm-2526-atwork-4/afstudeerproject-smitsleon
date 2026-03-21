@@ -9,6 +9,9 @@ export const Colors = {
   textMuted: '#666666',
   border: '#333333',
   error: '#FF4444',
+  dangerDark: '#8B1A1A',
+  statusInterested: '#FFB800',
+  statusGroup: '#4A90D9',
 };
 
 export const FontSizes = {

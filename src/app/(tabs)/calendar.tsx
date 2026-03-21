@@ -14,9 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 /* ── colour tokens for the three categories ── */
 const CAT_COLORS = {
-  interested: '#FFB800',
+  interested: Colors.statusInterested,
   going: Colors.primary,
-  group: '#4A90D9',
+  group: Colors.statusGroup,
 } as const;
 
 const CAT_LABELS: Record<string, string> = {

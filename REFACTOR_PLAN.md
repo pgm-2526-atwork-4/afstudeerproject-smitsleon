@@ -73,8 +73,8 @@
 | `src/components/design/FilterModal.tsx` | `'#FFFFFF'` | Vervang door `Colors.text` |
 
 **Actie:**
-- [ ] Voeg ontbrekende kleuren toe aan `src/style/theme.ts`
-- [ ] Vervang alle hardcoded waarden in bovenstaande bestanden
+- [x] Voeg ontbrekende kleuren toe aan `src/style/theme.ts`
+- [x] Vervang alle hardcoded waarden in bovenstaande bestanden
 
 ---
 

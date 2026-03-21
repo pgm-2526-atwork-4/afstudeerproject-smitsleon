@@ -278,7 +278,7 @@ export default function EditProfileScreen() {
               value={shareLocation} 
               onValueChange={setShareLocation} 
               trackColor={{ true: Colors.primary }}
-              thumbColor="#ffffff"
+              thumbColor={Colors.text}
               disabled={!useLocation}
             />
           </View>

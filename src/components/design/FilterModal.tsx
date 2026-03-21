@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   applyText: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: FontSizes.sm,
     fontWeight: 'bold',
   },

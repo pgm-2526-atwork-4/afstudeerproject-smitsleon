@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   deleteButton: {
-    backgroundColor: '#8B1A1A',
+    backgroundColor: Colors.dangerDark,
   },
   leaveButtonText: {
     color: Colors.text,

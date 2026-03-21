@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import { Colors } from '../style/theme';
 
 // Configure how notifications behave when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -35,7 +36,7 @@ export async function registerForPushNotificationsAsync(userId: string): Promise
         name: 'Concert Buddy',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#1DB954',
+        lightColor: Colors.primary,
       });
     }
 

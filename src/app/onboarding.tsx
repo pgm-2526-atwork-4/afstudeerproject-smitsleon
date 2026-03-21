@@ -329,7 +329,7 @@ export default function OnboardingScreen() {
                   value={useLocation} 
                   onValueChange={handleToggleLocation} 
                   trackColor={{ true: Colors.primary }}
-                  thumbColor="#ffffff"
+                  thumbColor={Colors.text}
                 />
               </View>
 
@@ -356,7 +356,7 @@ export default function OnboardingScreen() {
                   value={shareLocation} 
                   onValueChange={setShareLocation} 
                   trackColor={{ true: Colors.primary }}
-                  thumbColor="#ffffff"
+                  thumbColor={Colors.text}
                   disabled={!useLocation}
                 />
               </View>
