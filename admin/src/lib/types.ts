@@ -18,6 +18,7 @@ export interface DbUser {
   vibe_tags: string[];
   role: 'user' | 'admin';
   blocked_at: string | null;
+  push_token: string | null;
   created_at: string;
 }
 
@@ -64,6 +65,9 @@ export interface DbGroup {
   vibe_focus: string | null;
   max_members: number;
   created_at: string;
+  meeting_point_lat: number | null;
+  meeting_point_lng: number | null;
+  meeting_point_name: string | null;
 }
 
 export interface DbEventArtist {

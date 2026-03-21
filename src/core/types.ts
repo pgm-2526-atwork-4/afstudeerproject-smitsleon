@@ -76,6 +76,7 @@ export interface UserProfile {
   vibe_tags: string[];
   role: 'user' | 'admin';
   blocked_at: string | null;
+  push_token: string | null;
   created_at: string;
 }
 
@@ -95,12 +96,15 @@ export const VIBE_TAGS = [
 export interface Group {
   id: string;
   event_id: string;
-  created_by: string;
+  created_by: string | null;
   title: string;
   description: string | null;
   vibe_focus: string | null;
   max_members: number;
   created_at: string;
+  meeting_point_lat: number | null;
+  meeting_point_lng: number | null;
+  meeting_point_name: string | null;
   member_count?: number;
   is_member?: boolean;
 }

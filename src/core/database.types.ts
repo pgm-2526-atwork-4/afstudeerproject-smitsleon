@@ -3,24 +3,11 @@
  * Vervangt `as any` casts bij Supabase-queries.
  */
 
-export interface DbUser {
-  id: string;
-  first_name: string;
-  last_name: string;
-  avatar_url: string | null;
-  bio: string | null;
-  age: number | null;
-  birth_date: string | null;
-  city: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  share_location: boolean;
-  vibe_tags: string[];
-  role: 'user' | 'admin';
-  blocked_at: string | null;
-  push_token: string | null;
-  created_at: string;
-}
+import type { Group, UserProfile } from './types';
+
+export type DbUser = UserProfile;
+
+export type DbGroup = Omit<Group, 'member_count' | 'is_member'>;
 
 export interface DbEvent {
   id: string;
@@ -35,20 +22,6 @@ export interface DbEvent {
   latitude: number | null;
   longitude: number | null;
   created_at: string;
-}
-
-export interface DbGroup {
-  id: string;
-  event_id: string;
-  created_by: string | null;
-  title: string;
-  description: string | null;
-  vibe_focus: string | null;
-  max_members: number;
-  created_at: string;
-  meeting_point_lat: number | null;
-  meeting_point_lng: number | null;
-  meeting_point_name: string | null;
 }
 
 export interface DbGroupMember {
