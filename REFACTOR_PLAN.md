@@ -53,9 +53,9 @@
 **Probleem:** Een 200+ regels switch-statement met 7 cases. De cases `buddies` en `buddyInterested` zijn bijna identiek (enkel `'going'` vs `'interested'` verschilt).
 
 **Actie:**
-- [ ] Maak per section-type een aparte fetch-functie (bijv. `fetchUpcoming()`, `fetchBuddyEvents()`, etc.)
-- [ ] Gebruik een strategy-object/map om het juiste fetch-functie aan te roepen
-- [ ] Hergebruik de `getBuddyIds()` utility uit Stap 2
+- [x] Maak per section-type een aparte fetch-functie (bijv. `fetchUpcoming()`, `fetchBuddyEvents()`, etc.)
+- [x] Gebruik een strategy-object/map om het juiste fetch-functie aan te roepen
+- [x] Hergebruik de `getBuddyIds()` utility uit Stap 2
 
 ---
 
