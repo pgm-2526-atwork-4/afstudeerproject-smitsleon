@@ -122,6 +122,9 @@ function RootNavigator() {
       <Stack.Screen name="buddies" />
       <Stack.Screen name="private-chat" />
       <Stack.Screen name="favourite-artists" />
+      <Stack.Screen name="favourite-venues" />
+      <Stack.Screen name="my-concerts" />
+      <Stack.Screen name="venue/[id]" />
       <Stack.Screen name="section-events" />
     </Stack>
   );

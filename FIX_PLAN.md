@@ -155,8 +155,8 @@
 **Probleem:** `src/app/favourite-venues.tsx` bestaat maar is niet geregistreerd in `_layout.tsx` (regels 127-139). Expo Router kan het scherm wel resolven via bestandsnaam, maar expliciete registratie is best practice voor animaties en opties.
 
 **Actie:**
-- [ ] Voeg `<Stack.Screen name="favourite-venues" />` toe na de `favourite-artists` regel in `_layout.tsx`
-- [ ] Controleer of `my-concerts` ook geregistreerd is; zo niet, voeg die ook toe
+- [x] Voeg `<Stack.Screen name="favourite-venues" />` toe na de `favourite-artists` regel in `_layout.tsx`
+- [x] Controleer of `my-concerts` ook geregistreerd is; zo niet, voeg die ook toe
 
 **Bestanden:**
 - `src/app/_layout.tsx` — regel 138 (na `favourite-artists`)
