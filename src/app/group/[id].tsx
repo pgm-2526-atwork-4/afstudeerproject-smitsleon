@@ -1,11 +1,11 @@
 import { GroupEditModal } from '@/components/design/GroupEditModal';
 import { MeetingPointModal } from '@/components/design/MeetingPointModal';
 import { Member, MembersList } from '@/components/design/MembersList';
-import { useAuth } from '@/core/AuthContext';
-import { DbGroupWithEvent, GroupMemberUserId, GroupMemberWithUser } from '@/core/database.types';
-import { errorRetry, MSG } from '@/core/messages';
-import { notifyUsers } from '@/core/pushNotifications';
-import { supabase } from '@/core/supabase';
+import { useAuth } from '@/core/context/AuthContext';
+import { DbGroupWithEvent, GroupMemberUserId, GroupMemberWithUser } from '@/core/types/database.types';
+import { errorRetry, MSG } from '@/core/lib/messages';
+import { notifyUsers } from '@/core/lib/pushNotifications';
+import { supabase } from '@/core/lib/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';

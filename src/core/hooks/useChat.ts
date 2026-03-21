@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, FlatList } from 'react-native';
-import { sendPushOnly } from './pushNotifications';
-import { supabase } from './supabase';
+import { sendPushOnly } from '../lib/pushNotifications';
+import { supabase } from '../lib/supabase';
 import { useChatImages } from './useChatImages';
 import { useLiveLocation } from './useLiveLocation';
 

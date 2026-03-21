@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { supabase } from './supabase';
+import { supabase } from '../lib/supabase';
 
 export interface LiveLocationData {
   id: string;

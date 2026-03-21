@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ConcertStatusUserStatus, UserBasicInfo } from './database.types';
-import { supabase } from './supabase';
-import { getBuddyIds } from './utils';
+import { supabase } from '../lib/supabase';
+import { getBuddyIds } from '../lib/utils';
+import { ConcertStatusUserStatus, UserBasicInfo } from '../types/database.types';
 
 export interface BuddyStatus {
   id: string;

@@ -1,9 +1,9 @@
 import { EmptyState } from '@/components/design/EmptyState';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { UserAvatar } from '@/components/design/UserAvatar';
-import { useAuth } from '@/core/AuthContext';
-import { notifyUsers } from '@/core/pushNotifications';
-import { supabase } from '@/core/supabase';
+import { useAuth } from '@/core/context/AuthContext';
+import { notifyUsers } from '@/core/lib/pushNotifications';
+import { supabase } from '@/core/lib/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';

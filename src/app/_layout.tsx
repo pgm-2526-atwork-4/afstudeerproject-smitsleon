@@ -1,6 +1,6 @@
-import { AuthProvider, useAuth } from '@/core/AuthContext';
-import '@/core/pushNotifications'; // initialise notification handler early
-import { supabase } from '@/core/supabase';
+import { AuthProvider, useAuth } from '@/core/context/AuthContext';
+import '@/core/lib/pushNotifications'; // initialise notification handler early
+import { supabase } from '@/core/lib/supabase';
 import { Colors } from '@/style/theme';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';

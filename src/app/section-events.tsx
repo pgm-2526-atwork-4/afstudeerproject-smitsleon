@@ -1,11 +1,11 @@
 import { ConcertCard } from '@/components/design/ConcertCard';
 import { EmptyState } from '@/components/design/EmptyState';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
-import { useAuth } from '@/core/AuthContext';
-import { ConcertStatusEventId, DbEvent, FavArtistWithName, FavVenueId, GroupEventId } from '@/core/database.types';
-import { supabase } from '@/core/supabase';
-import { dbRowToEvent, Event, UserProfile } from '@/core/types';
-import { distanceKm, getBuddyIds } from '@/core/utils';
+import { useAuth } from '@/core/context/AuthContext';
+import { supabase } from '@/core/lib/supabase';
+import { dbRowToEvent, distanceKm, getBuddyIds } from '@/core/lib/utils';
+import { Event, UserProfile } from '@/core/types';
+import { ConcertStatusEventId, DbEvent, FavArtistWithName, FavVenueId, GroupEventId } from '@/core/types/database.types';
 import { Colors, FontSizes, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';

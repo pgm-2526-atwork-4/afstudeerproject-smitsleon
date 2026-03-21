@@ -1,7 +1,8 @@
-import { useAuth } from '@/core/AuthContext';
-import { resolveCurrentCity } from '@/core/location';
-import { supabase } from '@/core/supabase';
-import { VIBE_TAGS, calculateAge } from '@/core/types';
+import { useAuth } from '@/core/context/AuthContext';
+import { resolveCurrentCity } from '@/core/lib/location';
+import { supabase } from '@/core/lib/supabase';
+import { calculateAge } from '@/core/lib/utils';
+import { VIBE_TAGS } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';

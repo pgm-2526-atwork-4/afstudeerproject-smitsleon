@@ -1,5 +1,5 @@
 import { UserAvatar } from '@/components/design/UserAvatar';
-import type { BuddyStatus } from '@/core/useBuddyConcertStatus';
+import type { BuddyStatus } from '@/core/hooks/useBuddyConcertStatus';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';

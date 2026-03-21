@@ -1,4 +1,4 @@
-import { useAuth } from '@/core/AuthContext';
+import { useAuth } from '@/core/context/AuthContext';
 import { authStyles } from '@/style/authStyles';
 import { Colors } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';

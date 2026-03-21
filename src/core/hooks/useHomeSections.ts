@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
-import { useAuth } from './AuthContext';
-import { ConcertStatusEventId, DbEvent, FavArtistWithName, FavVenueId, GroupEventId } from './database.types';
-import { supabase } from './supabase';
-import { dbRowToEvent, Event } from './types';
-import { distanceKm, getBuddyIds } from './utils';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { dbRowToEvent, distanceKm, getBuddyIds } from '../lib/utils';
+import { Event } from '../types';
+import { ConcertStatusEventId, DbEvent, FavArtistWithName, FavVenueId, GroupEventId } from '../types/database.types';
 
 interface HomeSections {
   upcoming: Event[];

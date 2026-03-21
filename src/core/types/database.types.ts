@@ -3,7 +3,7 @@
  * Vervangt `as any` casts bij Supabase-queries.
  */
 
-import type { Group, UserProfile } from './types';
+import type { Group, UserProfile } from '.';
 
 export type DbUser = UserProfile;
 

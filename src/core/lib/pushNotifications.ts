@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import { Colors } from '../style/theme';
+import { Colors } from '../../style/theme';
 import { supabase } from './supabase';
 
 // Configure how notifications behave when the app is in the foreground

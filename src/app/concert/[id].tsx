@@ -1,27 +1,28 @@
 import { BuddyConcertStatus } from '@/components/design/BuddyConcertStatus';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
 import { CreateGroupModal } from '@/components/functional/CreateGroupModal';
-import { useAuth } from '@/core/AuthContext';
-import { BuddyPair, EventArtistWithArtist, GroupMemberGroupId, GroupMemberUserId, GroupWithMemberCount } from '@/core/database.types';
-import { errorRetry, MSG } from '@/core/messages';
-import { notifyUsers } from '@/core/pushNotifications';
-import { supabase } from '@/core/supabase';
-import { dbRowToEvent, Event, Group } from '@/core/types';
-import { useBuddyConcertStatus } from '@/core/useBuddyConcertStatus';
+import { useAuth } from '@/core/context/AuthContext';
+import { useBuddyConcertStatus } from '@/core/hooks/useBuddyConcertStatus';
+import { errorRetry, MSG } from '@/core/lib/messages';
+import { notifyUsers } from '@/core/lib/pushNotifications';
+import { supabase } from '@/core/lib/supabase';
+import { dbRowToEvent } from '@/core/lib/utils';
+import { Event, Group } from '@/core/types';
+import { BuddyPair, EventArtistWithArtist, GroupMemberGroupId, GroupMemberUserId, GroupWithMemberCount } from '@/core/types/database.types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Linking,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Linking,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function ConcertDetailScreen() {

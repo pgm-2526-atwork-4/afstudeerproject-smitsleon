@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { DbEvent } from './database.types';
-import { supabase } from './supabase';
-import { dbRowToEvent, Event, FilterState } from './types';
+import { supabase } from '../lib/supabase';
+import { dbRowToEvent } from '../lib/utils';
+import { Event, FilterState } from '../types';
+import type { DbEvent } from '../types/database.types';
 
 export function useConcerts() {
   const [events, setEvents] = useState<Event[]>([]);

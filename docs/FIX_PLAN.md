@@ -296,3 +296,34 @@
 | 15 | DB schema cleanup (age/time) | 🟢 Laag | Schema design |
 | 16 | Barrel exports aanvullen | ⚪ Nice-to-have | DX |
 | 17 | Test infrastructure | ⚪ Nice-to-have | Kwaliteitsborging |
+
+---
+
+## Extra: Folderstructuur verbeteringen
+
+> Gebaseerd op aanbevelingen uit `analysis_report.md` — sectie folderstructuur.
+
+### ✅ `core/` opsplitsen in subdirectories
+
+`src/core/` bevatte hooks, types, context, lib en utils door elkaar. Opgesplitst in:
+
+```
+src/core/
+  context/   → AuthContext.tsx
+  hooks/     → useBuddyConcertStatus.ts, useChat.ts, useChatImages.ts,
+               useConcerts.ts, useHomeSections.ts, useLiveLocation.ts
+  types/     → index.ts (was types.ts), database.types.ts
+  lib/       → supabase.ts, pushNotifications.ts, location.ts, messages.ts, utils.ts
+```
+
+- `types.ts` hernoemd naar `types/index.ts` zodat `@/core/types` import ongewijzigd blijft
+- `dbRowToEvent()` en `calculateAge()` verplaatst van `types.ts` naar `lib/utils.ts`
+- Alle imports (24+ bestanden) bijgewerkt, `git mv` gebruikt voor history
+
+### ✅ `screens/` verplaatst naar `assets/screenshots/`
+
+Root `screens/` map bevatte alleen 7 PNG screenshots, geen code. Verplaatst naar `assets/screenshots/`.
+
+### ✅ Documentatie naar `docs/`
+
+`analysis_report.md`, `REFACTOR_PLAN.md` en `FIX_PLAN.md` verplaatst naar `docs/`. `README.md` blijft op root (standaard conventie).

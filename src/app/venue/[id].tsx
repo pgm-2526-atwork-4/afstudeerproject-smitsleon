@@ -1,6 +1,7 @@
-import { useAuth } from '@/core/AuthContext';
-import { supabase } from '@/core/supabase';
-import { dbRowToEvent, Event } from '@/core/types';
+import { useAuth } from '@/core/context/AuthContext';
+import { supabase } from '@/core/lib/supabase';
+import { dbRowToEvent } from '@/core/lib/utils';
+import { Event } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';

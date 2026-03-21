@@ -2,26 +2,27 @@ import { ConcertCard } from '@/components/design/ConcertCard';
 import { ConcertSection } from '@/components/design/ConcertSection';
 import { FilterModal } from '@/components/design/FilterModal';
 import { PersonCard } from '@/components/design/PersonCard';
-import { useAuth } from '@/core/AuthContext';
-import { supabase } from '@/core/supabase';
-import { Artist, Event, FilterState, Venue, calculateAge } from '@/core/types';
-import { useConcerts } from '@/core/useConcerts';
-import { useHomeSections } from '@/core/useHomeSections';
+import { useAuth } from '@/core/context/AuthContext';
+import { useConcerts } from '@/core/hooks/useConcerts';
+import { useHomeSections } from '@/core/hooks/useHomeSections';
+import { supabase } from '@/core/lib/supabase';
+import { calculateAge } from '@/core/lib/utils';
+import { Artist, Event, FilterState, Venue } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

@@ -1,7 +1,7 @@
-import { supabase } from '@/core/supabase';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
+import { supabase } from '../lib/supabase';
 
 interface Opts {
   userId: string | undefined;

@@ -1,8 +1,8 @@
 import { AuthWall } from '@/components/design/AuthWall';
 import { UserAvatar } from '@/components/design/UserAvatar';
-import { useAuth } from '@/core/AuthContext';
-import { supabase } from '@/core/supabase';
-import { formatMessageTime } from '@/core/useChat';
+import { useAuth } from '@/core/context/AuthContext';
+import { supabase } from '@/core/lib/supabase';
+import { formatMessageTime } from '@/core/hooks/useChat';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
