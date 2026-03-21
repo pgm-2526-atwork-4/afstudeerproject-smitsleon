@@ -187,10 +187,10 @@
 **Probleem:** `concert/[id].tsx` is 756 regels. De "Groep aanmaken" modal (regels 412-455) is een zelfstandig blok dat extractie verdient.
 
 **Actie:**
-- [ ] Maak `src/components/functional/CreateGroupModal.tsx` aan
-- [ ] Verplaats modal-state (`groupName`, `groupDesc`, `maxMembers`) en submit-logica
-- [ ] Importeer en gebruik de nieuwe component in `concert/[id].tsx`
-- [ ] Controleer of het bestand significant korter is geworden
+- [x] Maak `src/components/functional/CreateGroupModal.tsx` aan
+- [x] Verplaats modal-state (`groupName`, `groupDesc`, `maxMembers`) en submit-logica
+- [x] Importeer en gebruik de nieuwe component in `concert/[id].tsx`
+- [x] Controleer of het bestand significant korter is geworden
 
 **Bestanden:**
 - `src/app/concert/[id].tsx` — regels 412-455

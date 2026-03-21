@@ -1,5 +1,6 @@
 import { BuddyConcertStatus } from '@/components/design/BuddyConcertStatus';
 import { LoadingScreen } from '@/components/design/LoadingScreen';
+import { CreateGroupModal } from '@/components/functional/CreateGroupModal';
 import { useAuth } from '@/core/AuthContext';
 import { BuddyPair, EventArtistWithArtist, GroupMemberGroupId, GroupMemberUserId, GroupWithMemberCount } from '@/core/database.types';
 import { notifyUsers } from '@/core/pushNotifications';
@@ -14,14 +15,10 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
   Linking,
-  Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -37,12 +34,6 @@ export default function ConcertDetailScreen() {
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
-  const [groupTitle, setGroupTitle] = useState('');
-  const [groupDescription, setGroupDescription] = useState('');
-  const [groupMaxMembers, setGroupMaxMembers] = useState(6);
-  const MIN_MEMBERS = 2;
-  const MAX_MEMBERS = 50;
-  const [creating, setCreating] = useState(false);
   const [concertStatus, setConcertStatus] = useState<'interested' | 'going' | null>(null);
   const [lineupArtists, setLineupArtists] = useState<{ id: string; name: string; image_url: string | null; genre: string | null }[]>([]);
 
@@ -172,49 +163,39 @@ export default function ConcertDetailScreen() {
     }
   }
 
-  async function handleCreateGroup() {
+  async function handleCreateGroup(title: string, description: string, maxMembers: number) {
     if (!user) { Alert.alert('Niet ingelogd', 'Log in om een groep aan te maken.'); return; }
-    if (!groupTitle.trim()) { Alert.alert('Verplicht veld', 'Geef je groep een naam.'); return; }
-    const maxMembers = groupMaxMembers;
-    if (maxMembers < 2) {
-      Alert.alert('Ongeldig getal', 'Maximum leden moet tussen 2 en 50 liggen.');
-      return;
+    if (!title.trim()) { Alert.alert('Verplicht veld', 'Geef je groep een naam.'); return; }
+    await ensureEventExists();
+    const { data: group, error: groupError } = await supabase
+      .from('groups')
+      .insert({ event_id: id, created_by: user.id, title: title.trim(), description: description.trim() || null, max_members: maxMembers })
+      .select()
+      .single();
+    if (groupError || !group) { Alert.alert('Fout', 'Groep aanmaken mislukt. Probeer opnieuw.'); return; }
+    await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id, role: 'admin' });
+
+    // Notify all buddies of the creator
+    const creatorName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : 'Iemand';
+    const { data: buddyRows } = await supabase
+      .from('buddies')
+      .select('user_id_1, user_id_2')
+      .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
+    if (buddyRows && buddyRows.length > 0) {
+      const buddyIds = buddyRows.map((b: BuddyPair) => b.user_id_1 === user.id ? b.user_id_2 : b.user_id_1);
+      await notifyUsers(
+        buddyIds.map((buddyId: string) => ({
+          user_id: buddyId,
+          type: 'buddy_group_created',
+          title: group.title,
+          body: `${creatorName} heeft een nieuwe groep aangemaakt voor ${event?.name ?? 'een concert'}`,
+          data: { group_id: group.id, creator_user_id: user.id, event_id: id, event_name: event?.name },
+        }))
+      );
     }
-    setCreating(true);
-    try {
-      await ensureEventExists();
-      const { data: group, error: groupError } = await supabase
-        .from('groups')
-        .insert({ event_id: id, created_by: user.id, title: groupTitle.trim(), description: groupDescription.trim() || null, max_members: maxMembers })
-        .select()
-        .single();
-      if (groupError || !group) { Alert.alert('Fout', 'Groep aanmaken mislukt. Probeer opnieuw.'); setCreating(false); return; }
-      await supabase.from('group_members').insert({ group_id: group.id, user_id: user.id, role: 'admin' });
 
-      // Notify all buddies of the creator
-      const creatorName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : 'Iemand';
-      const { data: buddyRows } = await supabase
-        .from('buddies')
-        .select('user_id_1, user_id_2')
-        .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`);
-      if (buddyRows && buddyRows.length > 0) {
-        const buddyIds = buddyRows.map((b: BuddyPair) => b.user_id_1 === user.id ? b.user_id_2 : b.user_id_1);
-        await notifyUsers(
-          buddyIds.map((buddyId: string) => ({
-            user_id: buddyId,
-            type: 'buddy_group_created',
-            title: group.title,
-            body: `${creatorName} heeft een nieuwe groep aangemaakt voor ${event?.name ?? 'een concert'}`,
-            data: { group_id: group.id, creator_user_id: user.id, event_id: id, event_name: event?.name },
-          }))
-        );
-      }
-
-      setGroupTitle(''); setGroupDescription(''); setGroupMaxMembers(6);
-      setModalVisible(false);
-      await fetchGroups();
-    } catch { Alert.alert('Fout', 'Er is een onverwachte fout opgetreden.'); }
-    finally { setCreating(false); }
+    setModalVisible(false);
+    await fetchGroups();
   }
 
   async function handleJoinGroup(group: Group) {
@@ -462,43 +443,11 @@ export default function ConcertDetailScreen() {
       </ScrollView>
 
       {/* Create Group Modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nieuwe groep aanmaken</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color={Colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.inputLabel}>Naam van de groep *</Text>
-            <TextInput style={styles.input} value={groupTitle} onChangeText={setGroupTitle} placeholder="bijv. Pit crew front row" placeholderTextColor={Colors.textMuted} maxLength={60} />
-            <Text style={styles.inputLabel}>Beschrijving</Text>
-            <TextInput style={[styles.input, styles.inputMultiline]} value={groupDescription} onChangeText={setGroupDescription} placeholder="Vertel iets over jullie groep..." placeholderTextColor={Colors.textMuted} multiline numberOfLines={3} maxLength={200} />
-            <Text style={styles.inputLabel}>Maximum aantal leden</Text>
-            <View style={styles.counterRow}>
-              <TouchableOpacity
-                style={[styles.counterBtn, groupMaxMembers <= MIN_MEMBERS && styles.counterBtnDisabled]}
-                onPress={() => setGroupMaxMembers((v) => Math.max(MIN_MEMBERS, v - 1))}
-                disabled={groupMaxMembers <= MIN_MEMBERS}
-              >
-                <Ionicons name="remove" size={20} color={groupMaxMembers <= MIN_MEMBERS ? Colors.textMuted : Colors.text} />
-              </TouchableOpacity>
-              <Text style={styles.counterValue}>{groupMaxMembers}</Text>
-              <TouchableOpacity
-                style={[styles.counterBtn, groupMaxMembers >= MAX_MEMBERS && styles.counterBtnDisabled]}
-                onPress={() => setGroupMaxMembers((v) => Math.min(MAX_MEMBERS, v + 1))}
-                disabled={groupMaxMembers >= MAX_MEMBERS}
-              >
-                <Ionicons name="add" size={20} color={groupMaxMembers >= MAX_MEMBERS ? Colors.textMuted : Colors.text} />
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity style={[styles.createButton, creating && styles.createButtonDisabled]} onPress={handleCreateGroup} disabled={creating}>
-              {creating ? <ActivityIndicator color={Colors.text} /> : <Text style={styles.createButtonText}>Groep aanmaken</Text>}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <CreateGroupModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onCreate={handleCreateGroup}
+      />
 
     </View>
   );
@@ -661,37 +610,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   joinedBadgeText: { color: Colors.primary, fontSize: FontSizes.sm, fontWeight: 'bold' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContent: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radius.lg,
-    borderTopRightRadius: Radius.lg,
-    padding: Spacing.xl,
-    gap: Spacing.sm,
-  },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.md },
-  modalTitle: { color: Colors.text, fontSize: FontSizes.lg, fontWeight: 'bold' },
-  inputLabel: { color: Colors.textSecondary, fontSize: FontSizes.sm, marginTop: Spacing.sm, marginBottom: Spacing.xs },
-  input: {
-    backgroundColor: Colors.surfaceLight,
-    borderRadius: Radius.sm,
-    color: Colors.text,
-    fontSize: FontSizes.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  inputMultiline: { minHeight: 80, textAlignVertical: 'top', paddingTop: Spacing.sm },
-  createButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    marginTop: Spacing.lg,
-  },
-  createButtonDisabled: { opacity: 0.6 },
-  createButtonText: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
+
 
   // Concert status buttons
   statusRow: {
@@ -725,32 +644,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
 
-  // Max members counter
-  counterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  counterBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  counterBtnDisabled: {
-    opacity: 0.4,
-  },
-  counterValue: {
-    color: Colors.text,
-    fontSize: FontSizes.xl,
-    fontWeight: 'bold',
-    minWidth: 32,
-    textAlign: 'center',
-  },
+
 
 });
