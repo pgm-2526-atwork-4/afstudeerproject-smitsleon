@@ -48,9 +48,9 @@ export function useLiveLocation({ userId, groupId, otherUserId, sendMessage }: O
     query.then(({ data }) => {
       if (!data) return;
       const map: Record<string, LiveLocationData> = {};
-      data.forEach((l: any) => { map[l.id] = l; });
+      data.forEach((l) => { map[l.id] = l; });
       setLiveLocations(map);
-      const mine = data.find((l: any) => l.user_id === userId);
+      const mine = data.find((l) => l.user_id === userId);
       if (mine) {
         setActiveLiveId(mine.id);
         startWatch(mine.id);
@@ -83,7 +83,7 @@ export function useLiveLocation({ userId, groupId, otherUserId, sendMessage }: O
     }
     channelBuilder.subscribe();
 
-    function handlePayload(payload: any) {
+    function handlePayload(payload: { eventType: string; new: Record<string, unknown>; old: Record<string, unknown> }) {
       if (payload.eventType === 'DELETE') {
         setLiveLocations((prev) => {
           const next = { ...prev };
@@ -151,7 +151,14 @@ export function useLiveLocation({ userId, groupId, otherUserId, sendMessage }: O
       const loc = await Location.getCurrentPositionAsync({});
       const expiresAt = new Date(Date.now() + minutes * 60 * 1000).toISOString();
 
-      const insert: Record<string, any> = {
+      const insert: {
+        user_id: string;
+        latitude: number;
+        longitude: number;
+        expires_at: string;
+        group_id?: string;
+        receiver_id?: string;
+      } = {
         user_id: userId,
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,

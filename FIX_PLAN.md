@@ -124,14 +124,14 @@
 **Probleem:** Er zijn nog ~14 `any` casts verspreid over de codebase na REFACTOR_PLAN Stap 7.
 
 **Actie:**
-- [ ] `src/app/(tabs)/home.tsx` — regels 119, 158, 168: vervang `any` door juiste Supabase/app types
-- [ ] `src/app/(tabs)/profile.tsx` — regels 62, 73: typ de state/data
-- [ ] `src/app/(tabs)/chat.tsx` — regel 92: typ het subscription/message object
-- [ ] `src/app/(tabs)/calendar.tsx` — regel 103: typ het event object
-- [ ] `src/core/useChat.ts` — regels 106, 213, 223: typ de payload/message objects
-- [ ] `src/core/useLiveLocation.ts` — regels 51, 53, 86, 154: typ de locatie/subscription objects
-- [ ] `src/core/useChatImages.ts` — regel 76: typ het upload resultaat
-- [ ] `src/core/useConcerts.ts` — regel 21: typ de query response
+- [x] `src/app/(tabs)/home.tsx` — regels 119, 158, 168: vervang `any` door juiste Supabase/app types
+- [x] `src/app/(tabs)/profile.tsx` — regels 62, 73: typ de state/data
+- [x] `src/app/(tabs)/chat.tsx` — regel 92: typ het subscription/message object
+- [x] `src/app/(tabs)/calendar.tsx` — regel 103: typ het event object
+- [x] `src/core/useChat.ts` — regels 106, 213, 223: typ de payload/message objects
+- [x] `src/core/useLiveLocation.ts` — regels 51, 53, 86, 154: typ de locatie/subscription objects
+- [x] `src/core/useChatImages.ts` — regel 76: typ het upload resultaat
+- [x] `src/core/useConcerts.ts` — regel 21: typ de query response
 
 **Aanpak:** Per bestand de `any` opzoeken, het Supabase return type afleiden, en een interface/type alias in `database.types.ts` toevoegen als dat nodig is.
 

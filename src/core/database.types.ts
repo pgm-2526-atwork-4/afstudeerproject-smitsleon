@@ -193,6 +193,39 @@ export interface EventArtistWithArtist {
   artists: Pick<DbArtist, 'id' | 'name' | 'image_url' | 'genre'>;
 }
 
+/** favourite_artists joined with artists(name) + user_id (for people search) */
+export interface FavArtistWithUserAndName extends FavArtistWithName {
+  user_id: string;
+}
+
+/** favourite_artists joined with full artist info */
+export interface FavArtistWithFullArtist {
+  artist_id: string;
+  artists: Pick<DbArtist, 'id' | 'name' | 'image_url' | 'genre'> | null;
+}
+
+/** favourite_venues joined with full venue info */
+export interface FavVenueWithFullVenue {
+  venue_id: string;
+  venues: Pick<DbVenue, 'id' | 'name' | 'city' | 'image_url'> | null;
+}
+
+/** group_members joined with groups + events (chat list) */
+export interface GroupMemberWithGroupDetail {
+  group_id: string;
+  joined_at: string;
+  groups: {
+    id: string;
+    title: string;
+    description: string | null;
+    max_members: number;
+    created_by: string | null;
+    event_id: string;
+    member_count: { count: number }[];
+    events: Pick<DbEvent, 'name' | 'image_url' | 'date' | 'location_name'> | null;
+  } | null;
+}
+
 /** buddies row selecting user_id_1, user_id_2 */
 export interface BuddyPair {
   user_id_1: string;

@@ -103,7 +103,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
       if (members && members.length > 0) {
         const name = cfg.senderName || 'Iemand';
         await sendPushOnly(
-          members.map((m: any) => ({
+          members.map((m) => ({
             user_id: m.user_id,
             title: cfg.groupTitle || 'Groepschat',
             body: `${name}: ${body}`,
@@ -210,7 +210,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
       if (error) {
         console.error('Error fetching messages:', error);
       } else {
-        setMessages((data ?? []).map((row: any) => parseGroupMessage(row)));
+        setMessages((data ?? []).map((row) => parseGroupMessage(row)));
       }
     } else {
       const otherUserId = (config as PrivateChatConfig).otherUserId;
@@ -220,7 +220,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
         .or(`and(sender_id.eq.${userId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${userId})`)
         .order('created_at', { ascending: true });
 
-      if (data) setMessages(data.map((row: any) => parsePrivateMessage(row)));
+      if (data) setMessages(data.map((row) => parsePrivateMessage(row)));
     }
   }, [userId, config, isGroup]);
 

@@ -100,7 +100,7 @@ export default function CalendarScreen() {
       catMap.get(eid)?.add('group');
     }
 
-    const mapped: ConcertEntry[] = (eventRows ?? []).map((e: any) => ({
+    const mapped: ConcertEntry[] = (eventRows ?? []).map((e) => ({
       id: e.id,
       name: e.name,
       date: e.date ?? '',

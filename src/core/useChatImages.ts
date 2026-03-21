@@ -73,7 +73,7 @@ export function useChatImages({ userId, sendMessage }: Opts) {
         uri: asset.uri,
         name: fileName,
         type: mimeType,
-      } as any);
+      } as unknown as Blob);
 
       const { error: uploadError } = await supabase.storage
         .from('chat-images')

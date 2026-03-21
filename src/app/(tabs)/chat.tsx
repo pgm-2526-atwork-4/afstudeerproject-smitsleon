@@ -9,14 +9,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -86,10 +86,11 @@ export default function ChatScreen() {
         )
       `)
       .eq('user_id', user.id)
-      .order('joined_at', { ascending: false });
+      .order('joined_at', { ascending: false })
+      .returns<{ group_id: string; joined_at: string; groups: { id: string; title: string; description: string | null; max_members: number; created_by: string | null; event_id: string; member_count: { count: number }[]; events: { name: string; image_url: string | null; date: string | null; location_name: string | null } | null } | null }[]>();
 
     const groupItems: ChatItem[] = (groupData ?? [])
-      .map((row: any) => {
+      .map((row) => {
         const g = row.groups;
         if (!g) return null;
         return {

@@ -33,12 +33,14 @@ export default function ProfileScreen() {
         .from('favourite_artists')
         .select('artist_id, artists(id, name, image_url, genre)')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .returns<{ artist_id: string; artists: { id: string; name: string; image_url: string | null; genre: string | null } | null }[]>(),
       supabase
         .from('favourite_venues')
         .select('venue_id, venues(id, name, city, image_url)')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .returns<{ venue_id: string; venues: { id: string; name: string; city: string | null; image_url: string | null } | null }[]>(),
       supabase
         .from('concert_status')
         .select('event_id, events!inner(date)', { count: 'exact', head: true })
@@ -59,22 +61,22 @@ export default function ProfileScreen() {
 
     if (favRes.data) {
       setFavouriteArtists(
-        favRes.data.map((row: any) => ({
-          id: row.artists.id,
-          name: row.artists.name,
-          image_url: row.artists.image_url,
-          genre: row.artists.genre,
+        favRes.data.map((row) => ({
+          id: row.artists?.id ?? '',
+          name: row.artists?.name ?? '',
+          image_url: row.artists?.image_url ?? null,
+          genre: row.artists?.genre ?? null,
         }))
       );
     }
 
     if (venueRes.data) {
       setFavouriteVenues(
-        venueRes.data.map((row: any) => ({
-          id: row.venues.id,
-          name: row.venues.name,
-          city: row.venues.city,
-          image_url: row.venues.image_url,
+        venueRes.data.map((row) => ({
+          id: row.venues?.id ?? '',
+          name: row.venues?.name ?? '',
+          city: row.venues?.city ?? null,
+          image_url: row.venues?.image_url ?? null,
         }))
       );
     }

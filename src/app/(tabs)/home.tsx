@@ -113,12 +113,13 @@ export default function HomeScreen() {
     const { data: favs } = await supabase
       .from('favourite_artists')
       .select('user_id, artists(name)')
-      .in('user_id', ids);
+      .in('user_id', ids)
+      .returns<{ user_id: string; artists: { name: string } | null }[]>();
 
     const artistMap = new Map<string, string[]>();
-    (favs ?? []).forEach((row: any) => {
+    (favs ?? []).forEach((row) => {
       const list = artistMap.get(row.user_id) ?? [];
-      list.push(row.artists.name);
+      if (row.artists) list.push(row.artists.name);
       artistMap.set(row.user_id, list);
     });
 
@@ -155,7 +156,7 @@ export default function HomeScreen() {
           .limit(10)
           .then(({ data }) =>
             setArtistResults(
-              (data ?? []).map((a: any) => ({ id: a.id, name: a.name, imageUrl: a.image_url ?? '', genre: a.genre ?? '' }))
+              (data ?? []).map((a) => ({ id: a.id, name: a.name, imageUrl: a.image_url ?? '', genre: a.genre ?? '' }))
             )
           );
         supabase
@@ -165,7 +166,7 @@ export default function HomeScreen() {
           .limit(10)
           .then(({ data }) =>
             setVenueResults(
-              (data ?? []).map((v: any) => ({
+              (data ?? []).map((v) => ({
                 id: v.id,
                 name: v.name,
                 city: v.city ?? '',

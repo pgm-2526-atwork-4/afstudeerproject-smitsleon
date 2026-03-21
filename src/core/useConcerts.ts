@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { DbEvent } from './database.types';
 import { supabase } from './supabase';
 import { dbRowToEvent, Event, FilterState } from './types';
 
@@ -16,36 +17,35 @@ export function useConcerts() {
       // If groupsOnly is checked, we do an inner join on groups to only return events that have groups.
       let query = supabase
         .from('events')
-        .select(filters?.groupsOnly ? '*, groups!inner(id, max_members)' : '*');
-
-      let queryObj: any = query; // Bypass strict type inference for dynamic select and later access
+        .select(filters?.groupsOnly ? '*, groups!inner(id, max_members)' : '*')
+        .returns<DbEvent[]>();
       
       // Date filtering
       if (filters?.startDate) {
-        queryObj = queryObj.gte('date', filters.startDate.toISOString());
+        query = query.gte('date', filters.startDate.toISOString());
       } else {
-        queryObj = queryObj.gte('date', new Date().toISOString());
+        query = query.gte('date', new Date().toISOString());
       }
 
       if (filters?.endDate) {
         // Adjust end date to the end of the day
         const endDay = new Date(filters.endDate);
         endDay.setHours(23, 59, 59, 999);
-        queryObj = queryObj.lte('date', endDay.toISOString());
+        query = query.lte('date', endDay.toISOString());
       }
 
-      queryObj = queryObj.order('date', { ascending: true });
+      query = query.order('date', { ascending: true });
       
       const hasActiveFilters = filters?.groupsOnly || filters?.startDate || filters?.endDate || keyword;
       if (hasActiveFilters) {
-        queryObj = queryObj.limit(500); // Ruimere limiet bij gericht zoeken/filteren
+        query = query.limit(500); // Ruimere limiet bij gericht zoeken/filteren
       } else {
-        queryObj = queryObj.limit(50); // Beperkte limiet op de standaard overzichtspagina
+        query = query.limit(50); // Beperkte limiet op de standaard overzichtspagina
       }
 
       // Keyword search
       if (keyword) {
-        queryObj = queryObj.or(
+        query = query.or(
           `name.ilike.%${keyword}%,location_name.ilike.%${keyword}%,city.ilike.%${keyword}%`
         );
       }
@@ -53,14 +53,14 @@ export function useConcerts() {
       // Group size filtering Note: this must refer to the joined table 'groups'
       if (filters?.groupsOnly) {
         if (filters.minGroupSize) {
-          queryObj = queryObj.gte('groups.max_members', parseInt(filters.minGroupSize, 10));
+          query = query.gte('groups.max_members', parseInt(filters.minGroupSize, 10));
         }
         if (filters.maxGroupSize) {
-          queryObj = queryObj.lte('groups.max_members', parseInt(filters.maxGroupSize, 10));
+          query = query.lte('groups.max_members', parseInt(filters.maxGroupSize, 10));
         }
       }
 
-      const { data, error: err } = await queryObj;
+      const { data, error: err } = await query;
       if (err) throw err;
 
       // Ensure unique events since inner join with groups might return duplicates
