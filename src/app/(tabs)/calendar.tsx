@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   catBadgeText: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 10,
     fontWeight: 'bold',
   },

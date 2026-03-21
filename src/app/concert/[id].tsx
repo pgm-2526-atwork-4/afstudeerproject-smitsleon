@@ -242,10 +242,10 @@ export default function ConcertDetailScreen() {
   if (loadingEvent) return <LoadingScreen />;
   if (!event) return (
     <View style={styles.container}>
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: Colors.textSecondary, fontSize: FontSizes.md }}>Event niet gevonden</Text>
-        <TouchableOpacity style={{ marginTop: Spacing.md }} onPress={() => router.back()}>
-          <Text style={{ color: Colors.primary, fontSize: FontSizes.md }}>Ga terug</Text>
+      <View style={styles.notFoundCenter}>
+        <Text style={styles.notFoundText}>Event niet gevonden</Text>
+        <TouchableOpacity style={styles.notFoundButton} onPress={() => router.back()}>
+          <Text style={styles.notFoundLink}>Ga terug</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -374,7 +374,7 @@ export default function ConcertDetailScreen() {
           </View>
 
           {loadingGroups ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing.xl }} />
+            <ActivityIndicator color={Colors.primary} style={styles.groupsLoader} />
           ) : groups.length === 0 ? (
             <Text style={styles.emptyGroups}>Nog geen groepen voor dit event. Maak er een aan!</Text>
           ) : (
@@ -644,7 +644,23 @@ const styles = StyleSheet.create({
   statusBtnTextActive: {
     color: Colors.primary,
   },
-
-
-
+  notFoundCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notFoundText: {
+    color: Colors.textSecondary,
+    fontSize: FontSizes.md,
+  },
+  notFoundButton: {
+    marginTop: Spacing.md,
+  },
+  notFoundLink: {
+    color: Colors.primary,
+    fontSize: FontSizes.md,
+  },
+  groupsLoader: {
+    marginTop: Spacing.xl,
+  },
 });

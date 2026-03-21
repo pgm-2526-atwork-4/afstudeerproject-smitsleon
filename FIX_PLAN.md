@@ -233,9 +233,9 @@
 **Probleem:** `calendar.tsx` regel 411 heeft hardcoded `'#fff'`. `concert/[id].tsx` regels 263-269 hebben inline styles.
 
 **Actie:**
-- [ ] Vervang `'#fff'` in `calendar.tsx` door `theme.colors.text` of `theme.colors.white`
-- [ ] Verplaats inline styles in `concert/[id].tsx` naar StyleSheet
-- [ ] Doe een snelle `grep` op `'#` in `/src` voor andere hardcoded kleuren die gemist zijn
+- [x] Vervang `'#fff'` in `calendar.tsx` door `Colors.text`
+- [x] Verplaats inline styles in `concert/[id].tsx` naar StyleSheet (5 inline styles → `notFoundCenter`, `notFoundText`, `notFoundButton`, `notFoundLink`, `groupsLoader`)
+- [x] Grep op `'#` in `/src` — extra `'#fff'` in `ConcertCard.tsx` gevonden en ook vervangen door `Colors.text`
 
 ---
 
