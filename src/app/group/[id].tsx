@@ -1,3 +1,6 @@
+import { GroupEditModal } from '@/components/design/GroupEditModal';
+import { MeetingPointModal } from '@/components/design/MeetingPointModal';
+import { Member, MembersList } from '@/components/design/MembersList';
 import { useAuth } from '@/core/AuthContext';
 import { notifyUsers } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
@@ -5,32 +8,19 @@ import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-interface Member {
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  avatar_url: string | null;
-  joined_at: string;
-  role: 'admin' | 'member';
-}
 
 export default function GroupDetailScreen() {
   const router = useRouter();
@@ -74,12 +64,10 @@ export default function GroupDetailScreen() {
   const [editDescription, setEditDescription] = useState('');
   const [editMaxMembers, setEditMaxMembers] = useState(6);
   const [savingEdit, setSavingEdit] = useState(false);
-  const MIN_MEMBERS = 2;
-  const MAX_MEMBERS = 50;
 
-  const isAdmin = members.some((m) => m.user_id === user?.id && m.role === 'admin');
-  const isMember = members.some((m) => m.user_id === user?.id);
-  const adminCount = members.filter((m) => m.role === 'admin').length;
+  const isAdmin = useMemo(() => members.some((m) => m.user_id === user?.id && m.role === 'admin'), [members, user?.id]);
+  const isMember = useMemo(() => members.some((m) => m.user_id === user?.id), [members, user?.id]);
+  const adminCount = useMemo(() => members.filter((m) => m.role === 'admin').length, [members]);
   const memberCount = members.length;
   const maxMembers = groupMaxMembers;
   const isFull = memberCount >= maxMembers;
@@ -282,14 +270,6 @@ export default function GroupDetailScreen() {
   }
 
   async function handleSaveEdit() {
-    if (!editTitle.trim()) {
-      Alert.alert('Verplicht veld', 'Geef de groep een naam.');
-      return;
-    }
-    if (editMaxMembers < memberCount) {
-      Alert.alert('Ongeldig', `Er zijn al ${memberCount} leden. Maximum kan niet lager zijn.`);
-      return;
-    }
     setSavingEdit(true);
     const { error } = await supabase
       .from('groups')
@@ -400,9 +380,6 @@ export default function GroupDetailScreen() {
       // user cancelled
     }
   }
-
-  const initials = (m: Member) =>
-    `${m.first_name.charAt(0)}${m.last_name.charAt(0)}`.toUpperCase();
 
   const parsedEventDate = eventDate ? new Date(eventDate) : null;
   const hasTime = parsedEventDate ? parsedEventDate.getUTCHours() !== 0 || parsedEventDate.getUTCMinutes() !== 0 : false;
@@ -522,73 +499,15 @@ export default function GroupDetailScreen() {
         </View>
 
         {/* Members section */}
-        <View style={styles.membersSection}>
-          <View style={styles.membersSectionHeader}>
-            <Text style={styles.sectionTitle}>Leden</Text>
-            <Text style={styles.memberCountLabel}>{memberCount} / {maxMembers}</Text>
-          </View>
-
-          {loadingMembers ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: Spacing.lg }} />
-          ) : (
-            members.map((member) => {
-              const isMemberAdmin = member.role === 'admin';
-              const isCurrentUser = member.user_id === user?.id;
-              const canManage = isAdmin && !isCurrentUser;
-              return (
-                <TouchableOpacity
-                  key={member.user_id}
-                  style={styles.memberRow}
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/user/[id]',
-                      params: { id: member.user_id },
-                    })
-                  }
-                  onLongPress={canManage ? () => handleMemberAction(member) : undefined}
-                >
-                  {/* Avatar */}
-                  {member.avatar_url ? (
-                    <Image source={{ uri: member.avatar_url }} style={styles.avatar} />
-                  ) : (
-                    <View style={styles.avatarPlaceholder}>
-                      <Text style={styles.avatarInitials}>{initials(member)}</Text>
-                    </View>
-                  )}
-
-                  {/* Name */}
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>
-                      {member.first_name} {member.last_name}
-                      {isCurrentUser ? ' (jij)' : ''}
-                    </Text>
-                  </View>
-
-                  {/* Admin badge */}
-                  {isMemberAdmin && (
-                    <View style={styles.memberAdminBadge}>
-                      <Ionicons name="shield-checkmark" size={12} color={Colors.primary} />
-                      <Text style={styles.memberAdminBadgeText}>Beheerder</Text>
-                    </View>
-                  )}
-
-                  {/* Admin action button */}
-                  {canManage ? (
-                    <TouchableOpacity
-                      hitSlop={8}
-                      onPress={() => handleMemberAction(member)}
-                    >
-                      <Ionicons name="ellipsis-vertical" size={18} color={Colors.textMuted} />
-                    </TouchableOpacity>
-                  ) : (
-                    <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-                  )}
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </View>
+        <MembersList
+          members={members}
+          loading={loadingMembers}
+          currentUserId={user?.id}
+          isAdmin={isAdmin}
+          memberCount={memberCount}
+          maxMembers={maxMembers}
+          onMemberAction={handleMemberAction}
+        />
 
         {/* Action buttons */}
         <View style={styles.actionSection}>
@@ -635,108 +554,29 @@ export default function GroupDetailScreen() {
       </ScrollView>
 
       {/* Meeting point modal */}
-      <Modal visible={showMeetingPointModal} animationType="slide" transparent onRequestClose={() => setShowMeetingPointModal(false)}>
-        <KeyboardAvoidingView style={styles.editModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.editModalContent}>
-            <View style={styles.editModalHeader}>
-              <Text style={styles.editModalTitle}>Meeting Point</Text>
-              <TouchableOpacity onPress={() => setShowMeetingPointModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.inputLabel}>Locatie of beschrijving</Text>
-            <TextInput
-              style={styles.input}
-              value={editMeetingName}
-              onChangeText={setEditMeetingName}
-              placeholder="bijv. Hoofdingang, Café De Kroeg, ..."
-              placeholderTextColor={Colors.textMuted}
-              maxLength={120}
-              autoFocus
-            />
-
-            <TouchableOpacity
-              style={[styles.saveButton, savingMeetingPoint && styles.saveButtonDisabled]}
-              onPress={handleSaveMeetingPoint}
-              disabled={savingMeetingPoint}
-            >
-              {savingMeetingPoint ? (
-                <ActivityIndicator color={Colors.text} />
-              ) : (
-                <Text style={styles.saveButtonText}>Opslaan</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <MeetingPointModal
+        visible={showMeetingPointModal}
+        onClose={() => setShowMeetingPointModal(false)}
+        value={editMeetingName}
+        onChangeText={setEditMeetingName}
+        onSave={handleSaveMeetingPoint}
+        saving={savingMeetingPoint}
+      />
 
       {/* Edit group modal */}
-      <Modal visible={showEditModal} animationType="slide" transparent onRequestClose={() => setShowEditModal(false)}>
-        <KeyboardAvoidingView style={styles.editModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.editModalContent}>
-            <View style={styles.editModalHeader}>
-              <Text style={styles.editModalTitle}>Groep aanpassen</Text>
-              <TouchableOpacity onPress={() => setShowEditModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.inputLabel}>Naam van de groep *</Text>
-            <TextInput
-              style={styles.input}
-              value={editTitle}
-              onChangeText={setEditTitle}
-              placeholder="bijv. Pit crew front row"
-              placeholderTextColor={Colors.textMuted}
-              maxLength={60}
-            />
-
-            <Text style={styles.inputLabel}>Beschrijving</Text>
-            <TextInput
-              style={[styles.input, styles.inputMultiline]}
-              value={editDescription}
-              onChangeText={setEditDescription}
-              placeholder="Vertel iets over jullie groep..."
-              placeholderTextColor={Colors.textMuted}
-              multiline
-              numberOfLines={3}
-              maxLength={200}
-            />
-
-            <Text style={styles.inputLabel}>Maximum aantal leden</Text>
-            <View style={styles.counterRow}>
-              <TouchableOpacity
-                style={[styles.counterBtn, editMaxMembers <= Math.max(MIN_MEMBERS, memberCount) && styles.counterBtnDisabled]}
-                onPress={() => setEditMaxMembers((v) => Math.max(Math.max(MIN_MEMBERS, memberCount), v - 1))}
-                disabled={editMaxMembers <= Math.max(MIN_MEMBERS, memberCount)}
-              >
-                <Ionicons name="remove" size={20} color={editMaxMembers <= Math.max(MIN_MEMBERS, memberCount) ? Colors.textMuted : Colors.text} />
-              </TouchableOpacity>
-              <Text style={styles.counterValue}>{editMaxMembers}</Text>
-              <TouchableOpacity
-                style={[styles.counterBtn, editMaxMembers >= MAX_MEMBERS && styles.counterBtnDisabled]}
-                onPress={() => setEditMaxMembers((v) => Math.min(MAX_MEMBERS, v + 1))}
-                disabled={editMaxMembers >= MAX_MEMBERS}
-              >
-                <Ionicons name="add" size={20} color={editMaxMembers >= MAX_MEMBERS ? Colors.textMuted : Colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.saveButton, savingEdit && styles.saveButtonDisabled]}
-              onPress={handleSaveEdit}
-              disabled={savingEdit}
-            >
-              {savingEdit ? (
-                <ActivityIndicator color={Colors.text} />
-              ) : (
-                <Text style={styles.saveButtonText}>Opslaan</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <GroupEditModal
+        visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title={editTitle}
+        onChangeTitle={setEditTitle}
+        description={editDescription}
+        onChangeDescription={setEditDescription}
+        maxMembers={editMaxMembers}
+        onChangeMaxMembers={setEditMaxMembers}
+        currentMemberCount={memberCount}
+        onSave={handleSaveEdit}
+        saving={savingEdit}
+      />
     </SafeAreaView>
   );
 }
@@ -832,72 +672,6 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     flex: 1,
   },
-  membersSection: {
-    padding: Spacing.lg,
-    paddingTop: 0,
-    gap: Spacing.sm,
-  },
-  membersSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.xs,
-  },
-  sectionTitle: {
-    color: Colors.text,
-    fontSize: FontSizes.lg,
-    fontWeight: 'bold',
-  },
-  memberCountLabel: {
-    color: Colors.textMuted,
-    fontSize: FontSizes.sm,
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    gap: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceLight,
-  },
-  avatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitials: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.md,
-    fontWeight: 'bold',
-  },
-  memberInfo: { flex: 1 },
-  memberName: {
-    color: Colors.text,
-    fontSize: FontSizes.md,
-  },
-  memberAdminBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: Colors.surfaceLight,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  memberAdminBadgeText: {
-    color: Colors.primary,
-    fontSize: FontSizes.xs,
-    fontWeight: '600',
-  },
   actionSection: {
     padding: Spacing.lg,
     gap: Spacing.sm,
@@ -942,90 +716,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  editModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  editModalContent: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radius.lg,
-    borderTopRightRadius: Radius.lg,
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xl + 20,
-    gap: Spacing.sm,
-  },
-  editModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
-  },
-  editModalTitle: {
-    color: Colors.text,
-    fontSize: FontSizes.xl,
-    fontWeight: 'bold',
-  },
-  inputLabel: {
-    color: Colors.textSecondary,
-    fontSize: FontSizes.sm,
-    fontWeight: '600',
-    marginTop: Spacing.sm,
-  },
-  input: {
-    backgroundColor: Colors.surfaceLight,
-    borderRadius: Radius.sm,
-    padding: Spacing.md,
-    color: Colors.text,
-    fontSize: FontSizes.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  inputMultiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  counterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.lg,
-    alignSelf: 'center',
-    marginVertical: Spacing.sm,
-  },
-  counterBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.full,
-    backgroundColor: Colors.surfaceLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  counterBtnDisabled: {
-    opacity: 0.4,
-  },
-  counterValue: {
-    color: Colors.text,
-    fontSize: FontSizes.xl,
-    fontWeight: 'bold',
-    minWidth: 40,
-    textAlign: 'center',
-  },
-  saveButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.full,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    marginTop: Spacing.md,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: Colors.text,
-    fontSize: FontSizes.md,
-    fontWeight: 'bold',
   },
 });

@@ -41,10 +41,10 @@
 **Probleem:** Dit is het grootste en meest complexe bestand in het project: 13 `useState` variabelen, twee modals met ~80% gedeelde code, en afgeleide state (`isAdmin`, `isMember`) die elke render opnieuw wordt berekend.
 
 **Actie:**
-- [ ] Extraheer `<MeetingPointModal>` naar `src/components/design/MeetingPointModal.tsx`
-- [ ] Extraheer `<GroupEditModal>` naar `src/components/design/GroupEditModal.tsx`
-- [ ] Extraheer `<MembersList>` naar `src/components/design/MembersList.tsx`
-- [ ] Wrap `isAdmin`, `isMember`, `adminCount` in `useMemo`
+- [x] Extraheer `<MeetingPointModal>` naar `src/components/design/MeetingPointModal.tsx`
+- [x] Extraheer `<GroupEditModal>` naar `src/components/design/GroupEditModal.tsx`
+- [x] Extraheer `<MembersList>` naar `src/components/design/MembersList.tsx`
+- [x] Wrap `isAdmin`, `isMember`, `adminCount` in `useMemo`
 
 ---
 
