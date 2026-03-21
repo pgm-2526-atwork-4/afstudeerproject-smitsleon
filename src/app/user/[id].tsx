@@ -7,7 +7,7 @@ import { UserAvatar } from '@/components/design/UserAvatar';
 import { VenueChip, VenueChipsGrid } from '@/components/design/VenueChipsGrid';
 import { VibeTags } from '@/components/design/VibeTags';
 import { useAuth } from '@/core/AuthContext';
-import { notifyUsers } from '@/core/pushNotifications';
+import { notifyUsers, sendPushOnly } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
 import { UserProfile, calculateAge } from '@/core/types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
@@ -38,7 +38,7 @@ const REPORT_REASONS = [
 
 export default function UserProfileScreen() {
   const router = useRouter();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, profile: myProfile } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -164,8 +164,19 @@ export default function UserProfileScreen() {
     const { error } = await supabase
       .from('buddy_requests')
       .insert({ from_user_id: currentUser.id, to_user_id: id });
-    if (error) Alert.alert('Fout', 'Kon buddy verzoek niet versturen.');
-    else { setBuddyStatus('pending_outgoing'); Alert.alert('Verstuurd', 'Buddy verzoek is verstuurd!'); }
+    if (error) {
+      Alert.alert('Fout', 'Kon buddy verzoek niet versturen.');
+    } else {
+      setBuddyStatus('pending_outgoing');
+      Alert.alert('Verstuurd', 'Buddy verzoek is verstuurd!');
+      const senderName = myProfile ? `${myProfile.first_name} ${myProfile.last_name}`.trim() : 'Iemand';
+      await sendPushOnly([{
+        user_id: id as string,
+        title: 'Nieuw buddy verzoek',
+        body: `${senderName} wil jouw buddy worden`,
+        data: { type: 'buddy_request', from_user_id: currentUser.id },
+      }]);
+    }
     setSending(false);
   }
 

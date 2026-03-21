@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, FlatList } from 'react-native';
+import { sendPushOnly } from './pushNotifications';
 import { supabase } from './supabase';
 import { useChatImages } from './useChatImages';
 import { useLiveLocation } from './useLiveLocation';
@@ -20,6 +21,8 @@ export interface ChatMessage {
 interface GroupChatConfig {
   mode: 'group';
   groupId: string;
+  groupTitle?: string;
+  senderName?: string;
 }
 
 interface PrivateChatConfig {
@@ -28,6 +31,7 @@ interface PrivateChatConfig {
   otherFirstName: string;
   otherLastName: string;
   otherAvatarUrl: string | null;
+  senderName?: string;
 }
 
 export type ChatConfig = GroupChatConfig | PrivateChatConfig;
@@ -58,12 +62,56 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
 
   const LIVE_RE = /^📍LIVE:(.+)$/;
 
+  // Format message content for push notification body
+  function pushBody(content: string): string | null {
+    if (content.startsWith('[sys] ')) return null;
+    if (content.startsWith('📷 ')) return '📷 Heeft een afbeelding gestuurd';
+    if (LIVE_RE.test(content)) return '📍 Deelt live locatie';
+    if (content.startsWith('📍 ')) return '📍 Heeft een locatie gedeeld';
+    return content.length > 100 ? content.slice(0, 100) + '…' : content;
+  }
+
   const isGroup = config.mode === 'group';
   const channelId = isGroup
     ? config.groupId
     : [userId, config.otherUserId].sort().join('-');
 
-  // ── Send location message ──────────────────────────
+  // ── Push helper (avoids duplicating logic between handleSend & sendLocationMsg) ──
+  async function sendChatPush(content: string) {
+    if (!userId) return;
+    const body = pushBody(content);
+    if (!body) return;
+
+    if (isGroup) {
+      const cfg = config as GroupChatConfig;
+      const { data: members } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', cfg.groupId)
+        .neq('user_id', userId);
+      if (members && members.length > 0) {
+        const name = cfg.senderName || 'Iemand';
+        await sendPushOnly(
+          members.map((m: any) => ({
+            user_id: m.user_id,
+            title: cfg.groupTitle || 'Groepschat',
+            body: `${name}: ${body}`,
+            data: { type: 'chat_message', group_id: cfg.groupId },
+          })),
+        );
+      }
+    } else {
+      const cfg = config as PrivateChatConfig;
+      await sendPushOnly([{
+        user_id: cfg.otherUserId,
+        title: cfg.senderName || 'Iemand',
+        body,
+        data: { type: 'private_message', sender_id: userId },
+      }]);
+    }
+  }
+
+  // ── Send location / image message ──────────────────
   const sendLocationMsg = useCallback(
     async (content: string) => {
       if (!userId) return;
@@ -72,6 +120,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
       } else {
         await supabase.from('private_messages').insert({ sender_id: userId, receiver_id: (config as PrivateChatConfig).otherUserId, content });
       }
+      await sendChatPush(content);
     },
     [userId, config, isGroup],
   );
@@ -258,6 +307,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
           if (prev.some((m) => m.id === data.id)) return prev;
           return [...prev, parseGroupMessage(data as GroupMessageRow)];
         });
+        await sendChatPush(content);
       }
     } else {
       const otherUserId = (config as PrivateChatConfig).otherUserId;
@@ -273,6 +323,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
         setMessages((prev) =>
           prev.some((m) => m.id === data.id) ? prev : [...prev, parsePrivateMessage(data)]
         );
+        await sendChatPush(content);
       }
     }
     setSending(false);

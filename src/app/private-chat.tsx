@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PrivateChatScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { userId, firstName, lastName, avatarUrl } = useLocalSearchParams<{
     userId: string;
     firstName: string;
@@ -28,12 +28,14 @@ export default function PrivateChatScreen() {
     avatarUrl: string;
   }>();
 
+  const senderName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : undefined;
   const chat = useChat(user?.id, {
     mode: 'private',
     otherUserId: userId,
     otherFirstName: firstName ?? '',
     otherLastName: lastName ?? '',
     otherAvatarUrl: avatarUrl || null,
+    senderName,
   });
 
   const initials = `${(firstName ?? '')[0] ?? ''}${(lastName ?? '')[0] ?? ''}`.toUpperCase();

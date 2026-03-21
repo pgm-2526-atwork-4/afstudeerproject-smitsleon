@@ -76,8 +76,32 @@ export async function notifyUsers(
   // 1. Insert in-app notifications
   await supabase.from('notifications').insert(notifications);
 
-  // 2. Fetch push tokens for all target users
-  const userIds = [...new Set(notifications.map((n) => n.user_id))];
+  // 2. Send push notifications
+  await sendPushOnly(
+    notifications.map((n) => ({
+      user_id: n.user_id,
+      title: n.title,
+      body: n.body,
+      data: { type: n.type, ...n.data },
+    })),
+  );
+}
+
+/**
+ * Send push notifications without creating in-app notification rows.
+ * Useful for chat messages and buddy requests which live in their own tables.
+ */
+export async function sendPushOnly(
+  targets: {
+    user_id: string;
+    title: string;
+    body: string;
+    data?: Record<string, unknown>;
+  }[],
+): Promise<void> {
+  if (targets.length === 0) return;
+
+  const userIds = [...new Set(targets.map((t) => t.user_id))];
   const { data: users } = await supabase
     .from('users')
     .select('id, push_token')
@@ -86,25 +110,23 @@ export async function notifyUsers(
 
   if (!users || users.length === 0) return;
 
-  // 3. Build per-user push messages
   const tokenMap = new Map<string, string>();
   for (const u of users) {
     if (u.push_token) tokenMap.set(u.id, u.push_token as string);
   }
 
-  const messages = notifications
-    .filter((n) => tokenMap.has(n.user_id))
-    .map((n) => ({
-      to: tokenMap.get(n.user_id)!,
+  const messages = targets
+    .filter((t) => tokenMap.has(t.user_id))
+    .map((t) => ({
+      to: tokenMap.get(t.user_id)!,
       sound: 'default' as const,
-      title: n.title,
-      body: n.body,
-      data: { type: n.type, ...n.data },
+      title: t.title,
+      body: t.body,
+      data: t.data ?? {},
     }));
 
   if (messages.length === 0) return;
 
-  // 4. Send via Expo Push API (best-effort — never block the UI flow)
   try {
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',

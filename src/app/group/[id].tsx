@@ -1,4 +1,5 @@
 import { useAuth } from '@/core/AuthContext';
+import { notifyUsers } from '@/core/pushNotifications';
 import { supabase } from '@/core/supabase';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,19 +7,19 @@ import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -225,6 +226,26 @@ export default function GroupDetailScreen() {
         user_id: user.id,
         content: `[sys] ${displayName} heeft zich aangesloten bij de groep`,
       });
+      // Notify all existing members
+      const { data: existingMembers } = await supabase
+        .from('group_members')
+        .select('user_id')
+        .eq('group_id', params.id)
+        .neq('user_id', user.id);
+      if (existingMembers && existingMembers.length > 0) {
+        const joinerName = profile
+          ? `${profile.first_name} ${profile.last_name}`.trim()
+          : 'Iemand';
+        await notifyUsers(
+          existingMembers.map((m: any) => ({
+            user_id: m.user_id,
+            type: 'group_joined',
+            title: groupTitle,
+            body: `${joinerName} heeft zich aangesloten bij de groep "${groupTitle}"`,
+            data: { group_id: params.id, joiner_user_id: user.id, event_id: params.event_id, event_name: params.event_name },
+          })),
+        );
+      }
       await fetchMembers();
     }
     setJoining(false);

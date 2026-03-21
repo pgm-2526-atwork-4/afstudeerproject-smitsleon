@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function GroupChatScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { id, title, description, max_members, created_by, event_id, event_name, event_image_url, event_date, event_location } = useLocalSearchParams<{
     id: string;
     title: string;
@@ -34,7 +34,8 @@ export default function GroupChatScreen() {
     event_location: string;
   }>();
 
-  const chat = useChat(user?.id, { mode: 'group', groupId: id });
+  const senderName = profile ? `${profile.first_name} ${profile.last_name}`.trim() : undefined;
+  const chat = useChat(user?.id, { mode: 'group', groupId: id, groupTitle: title, senderName });
 
   function renderMessage({ item, index }: { item: ChatMessage; index: number }) {
     const isOwn = item.user_id === user?.id;
