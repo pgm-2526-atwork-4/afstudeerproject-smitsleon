@@ -1,6 +1,6 @@
 # Concert Buddy
 
-Een mobiele app waarmee concertgangers in Belgie concerten ontdekken, vrienden vinden die naar dezelfde events gaan en samen hun concertbezoek coordineren.
+Een mobiele app die de drempel velaagt voor concertgangers om alleen naar een concert te gaan door ze met elkaar te verbinden.
 
 ## Features
 
