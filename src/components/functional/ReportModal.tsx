@@ -7,10 +7,12 @@ import {
     KeyboardAvoidingView,
     Modal,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View,
 } from 'react-native';
 
@@ -53,42 +55,52 @@ export function ReportModal({ visible, onClose, reporterId, reportedUserId }: Re
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-          <View style={styles.modal} onStartShouldSetResponder={() => true}>
-            <Text style={styles.title}>Gebruiker rapporteren</Text>
-            <Text style={styles.subtitle}>Waarom wil je deze gebruiker melden?</Text>
-            {REPORT_REASONS.map((r) => (
-              <TouchableOpacity
-                key={r.value}
-                style={[styles.reasonOption, reason === r.value && styles.reasonSelected]}
-                onPress={() => setReason(r.value)}
-              >
-                <Text style={[styles.reasonText, reason === r.value && styles.reasonTextSelected]}>{r.label}</Text>
-              </TouchableOpacity>
-            ))}
-            <TextInput
-              style={styles.input}
-              placeholder="Extra toelichting (optioneel)"
-              placeholderTextColor={Colors.textMuted}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity
-              style={[styles.submitBtn, !reason && styles.submitDisabled]}
-              onPress={handleSubmit}
-              disabled={!reason || sending}
-            >
-              {sending ? (
-                <ActivityIndicator size="small" color={Colors.text} />
-              ) : (
-                <Text style={styles.submitText}>Versturen</Text>
-              )}
-            </TouchableOpacity>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.overlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modal}>
+                <ScrollView bounces={false} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                  <Text style={styles.title}>Gebruiker rapporteren</Text>
+                  <Text style={styles.subtitle}>Waarom wil je deze gebruiker melden?</Text>
+                  {REPORT_REASONS.map((r) => (
+                    <TouchableOpacity
+                      key={r.value}
+                      style={[styles.reasonOption, reason === r.value && styles.reasonSelected]}
+                      onPress={() => setReason(r.value)}
+                    >
+                      <Text style={[styles.reasonText, reason === r.value && styles.reasonTextSelected]}>{r.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Extra toelichting (optioneel)"
+                    placeholderTextColor={Colors.textMuted}
+                    value={description}
+                    onChangeText={setDescription}
+                    multiline
+                    maxLength={500}
+                  />
+                  <TouchableOpacity
+                    style={[styles.submitBtn, !reason && styles.submitDisabled]}
+                    onPress={handleSubmit}
+                    disabled={!reason || sending}
+                  >
+                    {sending ? (
+                      <ActivityIndicator size="small" color={Colors.text} />
+                    ) : (
+                      <Text style={styles.submitText}>Versturen</Text>
+                    )}
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </TouchableOpacity>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -96,7 +108,7 @@ export function ReportModal({ visible, onClose, reporterId, reportedUserId }: Re
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modal: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.xl, width: '85%', borderWidth: 1, borderColor: Colors.border },
+  modal: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.xl, width: '85%', maxHeight: '80%', borderWidth: 1, borderColor: Colors.border },
   title: { color: Colors.text, fontSize: FontSizes.lg, fontWeight: 'bold', marginBottom: Spacing.xs },
   subtitle: { color: Colors.textSecondary, fontSize: FontSizes.sm, marginBottom: Spacing.md },
   reasonOption: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.xs },

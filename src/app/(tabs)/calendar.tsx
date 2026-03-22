@@ -12,7 +12,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Calendar, DateData } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-/* ── colour tokens for the three categories ── */
+// colour tokens for the three categories
 const CAT_COLORS = {
   interested: Colors.statusInterested,
   going: Colors.primary,
@@ -25,13 +25,13 @@ const CAT_LABELS: Record<string, string> = {
   group: 'Met groep',
 };
 
-/* ── types ── */
+/* types */
 type Category = keyof typeof CAT_COLORS;
 
 interface ConcertEntry {
   id: string;
   name: string;
-  date: string; // ISO string
+  date: string;
   location_name: string;
   image_url: string;
   categories: Category[];
@@ -45,18 +45,18 @@ export default function CalendarScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
-  /* ── fetch all relevant concerts ── */
+  // fetch all relevant concerts
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    // 1. Concert statuses (interested / going)
+    // Concert statuses (interested / going)
     const { data: statusRows } = await supabase
       .from('concert_status')
       .select('event_id, status')
       .eq('user_id', user.id);
 
-    // 2. Groups the user is a member of → event_ids
+    // Groups the user is a member of
     const { data: memberRows } = await supabase
       .from('group_members')
       .select('group_id')
@@ -82,13 +82,13 @@ export default function CalendarScreen() {
       return;
     }
 
-    // 3. Fetch event details
+    // Fetch event details
     const { data: eventRows } = await supabase
       .from('events')
       .select('*')
       .in('id', allEventIds);
 
-    // Build category map per event
+    // Category map pe event
     const catMap = new Map<string, Set<Category>>();
     for (const eid of allEventIds) {
       catMap.set(eid, new Set());
@@ -119,13 +119,13 @@ export default function CalendarScreen() {
     }, [fetchData]),
   );
 
-  /* ── derive marked dates for the calendar ── */
+  // derive marked dates for the calendar
   const markedDates = useMemo(() => {
     const marks: Record<string, { dots: { key: string; color: string }[]; selected?: boolean; selectedColor?: string }> = {};
 
     for (const c of concerts) {
       if (!c.date) continue;
-      const dateKey = c.date.substring(0, 10); // YYYY-MM-DD
+      const dateKey = c.date.substring(0, 10);
       if (!marks[dateKey]) {
         marks[dateKey] = { dots: [] };
       }
@@ -147,13 +147,13 @@ export default function CalendarScreen() {
     return marks;
   }, [concerts, selectedDate]);
 
-  /* ── concerts on selected date ── */
+  // concerts on selected date 
   const concertsOnDate = useMemo(() => {
     if (!selectedDate) return [];
     return concerts.filter((c) => c.date && c.date.substring(0, 10) === selectedDate);
   }, [concerts, selectedDate]);
 
-  /* ── upcoming concerts (today or later, sorted chronologically) ── */
+  // upcoming concerts (today or later, sorted chronologically)
   const upcomingConcerts = useMemo(() => {
     const today = new Date().toISOString().substring(0, 10);
     return concerts
@@ -181,7 +181,6 @@ export default function CalendarScreen() {
       <Text style={styles.screenTitle}>Agenda</Text>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Calendar */}
         <Calendar
           markingType="multi-dot"
           markedDates={markedDates}
