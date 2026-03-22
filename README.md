@@ -35,6 +35,10 @@ admin/          Apart React-webpanel voor beheer
 scripts/        Sync-script voor Ticketmaster events
 ```
 
+## Automatische event-sync
+
+Een GitHub Actions workflow (`sync-events.yml`) draait dagelijks om 06:00 UTC. Het script `scripts/sync-events.ts` haalt alle Belgische muziekevents op via de Ticketmaster Discovery API en synchroniseert venues, artiesten, events en event-artiest koppelingen naar Supabase. De workflow kan ook handmatig gestart worden via GitHub.
+
 ## Aan de slag
 
 ```bash
