@@ -4,13 +4,13 @@ Een mobiele app waarmee concertgangers in Belgie concerten ontdekken, vrienden v
 
 ## Features
 
-- **Eventontdekking** — Belgische concerten zoeken en filteren op datum, artiest of venue
-- **Buddy-systeem** — Vrienden toevoegen en zien wie naar welk concert gaat
-- **Groepen** — Groepen aanmaken per concert met meeting point, realtime chat en foto's
-- **Live locatie** — GPS-coordinaten delen binnen een groep tijdens het concert
-- **Vibe tags** — Matchen op concertbeleving (Moshen, Zingen, Dansen, VIP, ...)
-- **Push notificaties** — Meldingen bij buddy-verzoeken, groepsacties en berichten
-- **Admin-panel** — Webinterface voor beheer van events, artiesten, venues en rapportages
+- **Eventontdekking:** Belgische concerten zoeken en filteren op datum, artiest of venue
+- **Buddy-systeem:** Vrienden toevoegen en zien wie naar welk concert gaat
+- **Groepen:** Groepen aanmaken per concert met meeting point, realtime chat en foto's
+- **Live locatie:** GPS-coordinaten delen binnen een groep tijdens het concert
+- **Vibe tags:** Matchen op concertbeleving (Moshen, Zingen, Dansen, VIP, ...)
+- **Push notificaties:** Meldingen bij buddy-verzoeken, groepsacties en berichten
+- **Admin-panel:** Webinterface voor beheer van events, artiesten, venues en rapportages
 
 ## Tech stack
 
@@ -21,7 +21,6 @@ Een mobiele app waarmee concertgangers in Belgie concerten ontdekken, vrienden v
 | Backend | Supabase (PostgreSQL, Auth, Realtime, Storage) |
 | Admin-panel | React, Vite, Tailwind CSS |
 | Externe API | Ticketmaster Discovery API v2 |
-| Kaarten | react-native-maps, expo-location |
 | Build | EAS (Expo Application Services) |
 
 ## Projectstructuur
@@ -33,7 +32,6 @@ src/
   core/         Context, hooks, types en libraries
   style/        Theme-tokens (kleuren, spacing, typografie)
 admin/          Apart React-webpanel voor beheer
-supabase/       Databasemigraties (PostgreSQL)
 scripts/        Sync-script voor Ticketmaster events
 ```
 
