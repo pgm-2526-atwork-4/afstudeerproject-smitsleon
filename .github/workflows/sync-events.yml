@@ -1,0 +1,28 @@
+name: Sync Ticketmaster Events
+
+on:
+  schedule:
+    # Elke dag om 06:00 UTC (08:00 Belgische tijd in de zomer, 07:00 in de winter)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Handmatig triggeren via GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run sync-events script
+        run: npx tsx scripts/sync-events.ts
+        env:
+          EXPO_PUBLIC_TICKETMASTER_API_KEY: ${{ secrets.EXPO_PUBLIC_TICKETMASTER_API_KEY }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
