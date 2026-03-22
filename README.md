@@ -1,50 +1,59 @@
-# Welcome to your Expo app 👋
+# Concert Buddy
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Een mobiele app waarmee concertgangers in Belgie concerten ontdekken, vrienden vinden die naar dezelfde events gaan en samen hun concertbezoek coordineren.
 
-## Get started
+## Features
 
-1. Install dependencies
+- **Eventontdekking** — Belgische concerten zoeken en filteren op datum, artiest of venue
+- **Buddy-systeem** — Vrienden toevoegen en zien wie naar welk concert gaat
+- **Groepen** — Groepen aanmaken per concert met meeting point, realtime chat en foto's
+- **Live locatie** — GPS-coordinaten delen binnen een groep tijdens het concert
+- **Vibe tags** — Matchen op concertbeleving (Moshen, Zingen, Dansen, VIP, ...)
+- **Push notificaties** — Meldingen bij buddy-verzoeken, groepsacties en berichten
+- **Admin-panel** — Webinterface voor beheer van events, artiesten, venues en rapportages
 
-   ```bash
-   npm install
-   ```
+## Tech stack
 
-2. Start the app
+| Categorie | Technologie |
+|---|---|
+| Mobile app | React Native, Expo, TypeScript |
+| Navigatie | Expo Router (file-based routing) |
+| Backend | Supabase (PostgreSQL, Auth, Realtime, Storage) |
+| Admin-panel | React, Vite, Tailwind CSS |
+| Externe API | Ticketmaster Discovery API v2 |
+| Kaarten | react-native-maps, expo-location |
+| Build | EAS (Expo Application Services) |
 
-   ```bash
-   npx expo start
-   ```
+## Projectstructuur
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+src/
+  app/          Schermen en routing (Expo Router)
+  components/   Herbruikbare UI-componenten (design/ en functional/)
+  core/         Context, hooks, types en libraries
+  style/        Theme-tokens (kleuren, spacing, typografie)
+admin/          Apart React-webpanel voor beheer
+supabase/       Databasemigraties (PostgreSQL)
+scripts/        Sync-script voor Ticketmaster events
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Aan de slag
 
-## Learn more
+```bash
+# Installeer dependencies
+npm install
 
-To learn more about developing your project with Expo, look at the following resources:
+# Start de Expo dev server
+npx expo start
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# Start het admin-panel
+cd admin && npm install && npm run dev
+```
 
-## Join the community
+Maak een `.env`-bestand aan in de root met de volgende variabelen:
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+EXPO_PUBLIC_SUPABASE_URL=...
+EXPO_PUBLIC_SUPABASE_ANON_KEY=...
+EXPO_PUBLIC_TICKETMASTER_API_KEY=...
+```
