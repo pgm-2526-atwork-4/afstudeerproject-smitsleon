@@ -122,7 +122,7 @@ export default function EventEditModal({ event, isNew, onClose, onSaved, lockedV
           </select>
         </div>
 
-        {/* Stad (read-only) */}
+        {/* Stad */}
         {(() => {
           const selectedVenue = venues.find((v) => v.id === editing.venue_id);
           return selectedVenue?.city ? (

@@ -34,7 +34,6 @@ export default function ImageUpload({ value, folder, onChange }: Props) {
     onChange(data.publicUrl);
     setUploading(false);
 
-    // Reset input so same file can be re-selected
     if (inputRef.current) inputRef.current.value = '';
   }
 

@@ -1,8 +1,3 @@
-/**
- * Database types for the Concert Buddy Admin panel.
- * Based on the mobile app's database.types.ts, extended with admin-specific fields.
- */
-
 export interface DbUser {
   id: string;
   first_name: string;

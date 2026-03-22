@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Already logged in as admin → redirect to dashboard
+  // Already logged in as admin => redirect to dashboard
   if (!loading && session && profile?.role === 'admin') {
     return <Navigate to="/" replace />;
   }
