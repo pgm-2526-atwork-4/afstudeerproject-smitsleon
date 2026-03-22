@@ -42,6 +42,7 @@ interface PersonResult {
 export default function HomeScreen() {
   const { events, groupCounts, loading: searchLoading, error, searchConcerts } = useConcerts();
   const sections = useHomeSections();
+  const loadSections = sections.load;
   const { user } = useAuth();
   const [query, setQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
@@ -82,8 +83,8 @@ export default function HomeScreen() {
      
     useCallback(() => {
       fetchUnreadCount();
-      sections.load();
-    }, [fetchUnreadCount, sections.load])
+      loadSections();
+    }, [fetchUnreadCount, loadSections])
   );
 
   const searchPeople = useCallback(async (q: string) => {
