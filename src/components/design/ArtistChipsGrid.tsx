@@ -11,21 +11,11 @@ export interface ArtistChip {
 
 interface Props {
   artists: ArtistChip[];
-  /** Max number of artist chips to show before showing the overflow indicator. Default: 5 */
   maxVisible?: number;
-  /** Called when an artist chip is tapped. */
   onArtistPress?: (artist: ArtistChip) => void;
-  /** Called when the overflow chip is tapped. If omitted, overflow chip is hidden. */
   onMorePress?: () => void;
 }
 
-/**
- * Horizontal wrapping grid of circular artist chips with name below.
- * If more artists than maxVisible, shows a +N chip.
- *
- * Navigation is handled by the parent via onArtistPress/onMorePress callbacks,
- * keeping this component decoupled from routing.
- */
 export function ArtistChipsGrid({ artists, maxVisible = 5, onArtistPress, onMorePress }: Props) {
   const visible = artists.slice(0, maxVisible);
   const overflow = artists.length - maxVisible;

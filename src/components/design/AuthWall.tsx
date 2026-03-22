@@ -9,10 +9,6 @@ interface Props {
   subtitle?: string;
 }
 
-/**
- * Full-screen overlay encouraging the visitor to log in or register.
- * Used on tabs that require authentication.
- */
 export function AuthWall({
   title = 'Log in om verder te gaan',
   subtitle = 'Maak een account aan of log in om toegang te krijgen tot deze functie.',

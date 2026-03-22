@@ -5,9 +5,6 @@ interface Props {
   tags: string[];
 }
 
-/**
- * Horizontal wrapping row of pill-shaped vibe tags.
- */
 export function VibeTags({ tags }: Props) {
   if (tags.length === 0) return null;
 

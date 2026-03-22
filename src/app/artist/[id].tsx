@@ -31,7 +31,7 @@ export default function ArtistProfileScreen() {
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
 
-  // Check if artist is already favourited
+  // Is already favourited?
   const checkFavourite = useCallback(async () => {
     if (!user || !params.id) return;
     const { data } = await supabase
@@ -43,7 +43,6 @@ export default function ArtistProfileScreen() {
     setIsFavourite(!!data);
   }, [user, params.id]);
 
-  // Fetch upcoming events for this artist
   const fetchUpcomingEvents = useCallback(async () => {
     if (!params.name) return;
     setLoadingEvents(true);
@@ -72,7 +71,6 @@ export default function ArtistProfileScreen() {
     setToggling(true);
 
     if (isFavourite) {
-      // Remove from favourites
       await supabase
         .from('favourite_artists')
         .delete()
@@ -80,7 +78,6 @@ export default function ArtistProfileScreen() {
         .eq('artist_id', params.id);
       setIsFavourite(false);
     } else {
-      // Upsert artist first (cache)
       await supabase.from('artists').upsert(
         {
           id: params.id,
@@ -90,7 +87,6 @@ export default function ArtistProfileScreen() {
         },
         { onConflict: 'id' }
       );
-      // Add to favourites
       await supabase.from('favourite_artists').insert({
         user_id: user.id,
         artist_id: params.id,
@@ -103,7 +99,7 @@ export default function ArtistProfileScreen() {
   return (
     <View style={styles.container}>
       <ScrollView>
-        {/* Header image */}
+        {/* Header wrapper */}
         <View style={styles.imageWrapper}>
           {params.imageUrl ? (
             <Image source={{ uri: params.imageUrl }} style={styles.headerImage} />
@@ -113,12 +109,10 @@ export default function ArtistProfileScreen() {
           <View style={styles.imageOverlay} />
           <Text style={styles.artistName}>{params.name}</Text>
 
-          {/* Back button */}
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={Colors.text} />
           </TouchableOpacity>
 
-          {/* Favourite button */}
           {user && (
           <TouchableOpacity
             style={styles.favButton}

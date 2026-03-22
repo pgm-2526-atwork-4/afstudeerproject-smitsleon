@@ -15,7 +15,7 @@ function RootNavigator() {
   const segments = useSegments();
   const router = useRouter();
 
-  // Navigate to the correct screen when the user taps a push notification
+  // Navigate to the correct screen when you tap a push notification
   const lastNotificationResponse = Notifications.useLastNotificationResponse();
   useEffect(() => {
     if (!lastNotificationResponse || !session || loading) return;
@@ -27,7 +27,7 @@ function RootNavigator() {
 
     (async () => {
       try {
-        // Chat message → open group chat
+        // Chat message => open group chat
         if (type === 'chat_message' && data?.group_id) {
           const { data: g } = await supabase
             .from('groups')
@@ -55,7 +55,7 @@ function RootNavigator() {
           }
         }
 
-        // Private message → open private chat
+        // Private message => open private chat
         if (type === 'private_message' && data?.sender_id) {
           const { data: u } = await supabase
             .from('users')
@@ -76,7 +76,7 @@ function RootNavigator() {
           }
         }
 
-        // Everything else → notifications page
+        // Everything else => notifications page
         router.push('/notifications');
       } catch {
         router.push('/notifications');
@@ -84,7 +84,6 @@ function RootNavigator() {
     })();
   }, [lastNotificationResponse, session, loading, router]);
 
-  // Show loading spinner while auth state is being determined
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
@@ -95,12 +94,11 @@ function RootNavigator() {
 
   const inOnboarding = segments[0] === 'onboarding';
 
-  // Redirect away from onboarding when not logged in
   if (!session && inOnboarding) {
     return <Redirect href="/(tabs)/home" />;
   }
 
-  // Allow guests to browse (tabs) — only redirect when needed
+  // Allow guests to browse (tabs)
   if (session && (!profile || !profile.first_name) && !inOnboarding) {
     return <Redirect href="/onboarding" />;
   }

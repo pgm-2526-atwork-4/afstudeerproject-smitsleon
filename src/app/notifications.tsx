@@ -20,7 +20,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Unified notification item
 interface NotifItem {
   id: string;
   itemType: 'buddy_request' | 'notification';
@@ -35,15 +34,15 @@ interface NotifItem {
   read: boolean;
   created_at: string;
   localStatus?: 'pending' | 'accepted';
-  // Populated for buddy_accepted notifications
+  // for buddy_accepted notifications
   accepter_first_name?: string;
   accepter_last_name?: string;
   accepter_avatar_url?: string | null;
-  // Populated for group_joined notifications
+  // for group_joined notifications
   joiner_first_name?: string;
   joiner_last_name?: string;
   joiner_avatar_url?: string | null;
-  // Populated for buddy_group_created notifications
+  // for buddy_group_created notifications
   creator_first_name?: string;
   creator_last_name?: string;
   creator_avatar_url?: string | null;
@@ -164,13 +163,13 @@ export default function NotificationsScreen() {
       };
     });
 
-    // Merge and sort newest-first
+    // newest-first
     const merged = [...buddyItems, ...notifItems].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     setItems(merged);
 
-    // Mark all unread notifications as read in DB, then mirror in local state
+    // Mark all unread notifications as read in DB
     const unreadIds = (notifsRes.data ?? [])
       .filter((n: any) => !n.read)
       .map((n: any) => n.id);
@@ -277,7 +276,7 @@ export default function NotificationsScreen() {
       );
     }
 
-    // App notification — buddy_accepted
+    // App notification buddy_accepted
     if (item.type === 'buddy_accepted') {
       const accepterId = item.data?.accepter_user_id;
       const initials = `${(item.accepter_first_name ?? '')[0] ?? ''}${(item.accepter_last_name ?? '')[0] ?? ''}`.toUpperCase();
@@ -302,7 +301,7 @@ export default function NotificationsScreen() {
       );
     }
 
-    // App notification — group_joined
+    // App notification  group_joined
     if (item.type === 'group_joined') {
       const groupId = item.data?.group_id;
       return (
@@ -355,7 +354,7 @@ export default function NotificationsScreen() {
       );
     }
 
-    // App notification — buddy_group_created
+    // App notification buddy_group_created
     if (item.type === 'buddy_group_created') {
       const groupId = item.data?.group_id;
       return (

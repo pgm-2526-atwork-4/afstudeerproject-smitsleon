@@ -8,9 +8,6 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-/**
- * Circular user avatar. Shows photo if uri is provided, otherwise shows initials.
- */
 export function UserAvatar({ uri, initials, size = 40, style }: Props) {
   const circleStyle = {
     width: size,

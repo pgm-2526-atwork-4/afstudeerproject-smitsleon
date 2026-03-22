@@ -187,7 +187,6 @@ export default function HomeScreen() {
       setIsSearchActive(false);
       sections.load();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, filters, searchMode, searchPeople]);
 
   const applyFilters = (newFilters: FilterState) => {
@@ -214,7 +213,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       handleSearch();
-    }, 500); // 500ms delay
+    }, 500);
 
     return () => clearTimeout(delayDebounceFn);
   }, [query, filters, handleSearch]);
@@ -318,7 +317,7 @@ export default function HomeScreen() {
       />
 
       {searchMode === 'people' ? (
-        /* ========== PEOPLE SEARCH MODE ========== */
+        /* PEOPLE SEARCH MODE */
         peopleLoading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={Colors.primary} />
@@ -355,7 +354,7 @@ export default function HomeScreen() {
           </View>
         )
       ) : isSearchActive ? (
-        /* ========== SEARCH RESULTS MODE ========== */
+        /* SEARCH RESULTS MODE */
         <>
           {/* Artist results */}
           {artistResults.length > 0 && (
@@ -459,7 +458,7 @@ export default function HomeScreen() {
           )}
         </>
       ) : (
-        /* ========== SECTIONS MODE (default) ========== */
+        /* SECTIONS MODE */
         sections.loading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={Colors.primary} />
@@ -541,7 +540,7 @@ export default function HomeScreen() {
                 </View>
               )}
 
-            {/* All concerts grid — withGroups first, then remaining upcoming */}
+            {/* All concerts grid */}
             {sections.allConcerts.length > 0 && (
               <View style={styles.allConcertsSection}>
                 <Text style={styles.allConcertsTitle}>Alle concerten</Text>

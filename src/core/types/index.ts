@@ -1,4 +1,3 @@
-// Ticketmaster API response types
 export interface TicketmasterEvent {
   id: string;
   name: string;
@@ -28,7 +27,7 @@ export interface TicketmasterResponse {
   };
 }
 
-// Simplified event for our app
+// Simplified event for app
 export interface Event {
   id: string;
   name: string;
@@ -41,7 +40,7 @@ export interface Event {
   url?: string;
 }
 
-// Artist from Ticketmaster Attractions API
+// Artist from Ticketmaster API
 export interface Artist {
   id: string;
   name: string;
@@ -49,7 +48,7 @@ export interface Artist {
   genre: string;
 }
 
-// Venue from Ticketmaster / Supabase
+// Venue from Ticketmaster
 export interface Venue {
   id: string;
   name: string;
@@ -60,7 +59,6 @@ export interface Venue {
   longitude: number | null;
 }
 
-// User profile stored in Supabase
 export interface UserProfile {
   id: string;
   first_name: string;
@@ -92,7 +90,6 @@ export const VIBE_TAGS = [
   'Foodtrucks',
 ] as const;
 
-// Group stored in Supabase
 export interface Group {
   id: string;
   event_id: string;

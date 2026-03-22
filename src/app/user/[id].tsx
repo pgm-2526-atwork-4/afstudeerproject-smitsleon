@@ -105,7 +105,7 @@ export default function UserProfileScreen() {
       );
     }
 
-    // Check buddy relationship
+    // Check buddy status
     if (currentUser && currentUser.id !== id) {
       const { data: areBuddies } = await supabase.rpc('are_buddies', {
         user_a: currentUser.id,
@@ -147,7 +147,7 @@ export default function UserProfileScreen() {
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-  // --- Actions ---
+  //  Actions
   async function handleSendRequest() {
     if (!currentUser || !id) return;
     setSending(true);
@@ -178,7 +178,7 @@ export default function UserProfileScreen() {
     else {
       setBuddyStatus('buddies');
       setBuddyCount((c) => c + 1);
-      // Notify the requester (id) that their request was accepted
+      // Notify the requester that their request was accepted
       await notifyUsers([{
         user_id: id as string,
         type: 'buddy_accepted',
@@ -241,7 +241,7 @@ export default function UserProfileScreen() {
     );
   }
 
-  // --- Loading / Error states ---
+  // Loading / Error states
   if (!currentUser) {
     return (
       <View style={styles.container}>
@@ -283,17 +283,15 @@ export default function UserProfileScreen() {
           )}
         </View>
 
-        {/* Avatar */}
         <View style={styles.avatarWrapper}>
           <UserAvatar uri={profile.avatar_url} initials={initials} size={120} />
         </View>
 
-        {/* Name */}
         <Text style={styles.name}>
           {profile.first_name} {profile.last_name}{isOwnProfile ? ' (jij)' : ''}
         </Text>
 
-        {/* Meta */}
+        {/* Meta info */}
         <View style={styles.metaRow}>
           {profile.birth_date ? (
             <MetaItem icon="calendar-outline" label={`${calculateAge(profile.birth_date)} jaar`} />
@@ -308,7 +306,7 @@ export default function UserProfileScreen() {
           />
         </View>
 
-        {/* Concert status row */}
+        {/* Concert status */}
         <View style={styles.metaRow}>
           <MetaItem
             icon="star-outline"
@@ -334,7 +332,7 @@ export default function UserProfileScreen() {
           </View>
         ) : null}
 
-        {/* Buddy actions — after bio */}
+        {/* Buddy actions */}
         {!isOwnProfile && (
           <View style={styles.buddyActions}>
             {buddyStatus === 'none' && (
@@ -399,7 +397,7 @@ export default function UserProfileScreen() {
           </View>
         ) : null}
 
-        {/* Favoriete artiesten */}
+        {/* Favourite artists */}
         <View style={styles.section}>
           <SectionHeader icon="musical-notes" title="Favoriete artiesten" />
           {favouriteArtists.length === 0 ? (
@@ -419,7 +417,7 @@ export default function UserProfileScreen() {
           )}
         </View>
 
-        {/* Favoriete venues */}
+        {/* Favourite venues */}
         <View style={styles.section}>
           <SectionHeader icon="location" title="Favoriete venues" />
           {favouriteVenues.length === 0 ? (
@@ -439,12 +437,6 @@ export default function UserProfileScreen() {
           )}
         </View>
 
-        {/* Member since */}
-        <View style={styles.section}>
-          <Text style={styles.joinedText}>
-            Lid sinds {new Date(profile.created_at).toLocaleDateString('nl-BE', { year: 'numeric', month: 'long' })}
-          </Text>
-        </View>
       </ScrollView>
 
       <Modal visible={showBuddyMenu} transparent animationType="fade" onRequestClose={() => setShowBuddyMenu(false)}>

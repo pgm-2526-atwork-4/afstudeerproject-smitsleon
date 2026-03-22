@@ -10,9 +10,6 @@ interface Props {
   onPress?: () => void;
 }
 
-/**
- * A small icon + label pair used in profile meta rows (age, location, buddies, etc.)
- */
 export function MetaItem({ icon, iconColor = Colors.textSecondary, label, labelColor, onPress }: Props) {
   const content = (
     <>

@@ -11,9 +11,6 @@ export interface BuddyStatus {
   status: 'interested' | 'going';
 }
 
-/**
- * Fetches the concert status of the current user's buddies for a given event.
- */
 export function useBuddyConcertStatus(userId: string | undefined, eventId: string | undefined) {
   const [buddyStatuses, setBuddyStatuses] = useState<BuddyStatus[]>([]);
 

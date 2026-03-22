@@ -68,7 +68,6 @@ export function FilterModal({ visible, onClose, initialFilters, onApply }: Props
       setFilters((prev) => ({
         ...prev,
         startDate: selectedDate,
-        // Auto-clear endDate if it would become invalid
         endDate: prev.endDate && prev.endDate < selectedDate ? null : prev.endDate,
       }));
       setValidationError(null);
@@ -105,7 +104,7 @@ export function FilterModal({ visible, onClose, initialFilters, onApply }: Props
                 <Text style={styles.checkboxLabel}>Alleen concerten met bestaande groepen</Text>
               </TouchableOpacity>
 
-              {/* Group Size (Conditional) */}
+              {/* Group Size  */}
               {filters.groupsOnly && (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Groepsgrootte:</Text>
@@ -174,7 +173,6 @@ export function FilterModal({ visible, onClose, initialFilters, onApply }: Props
                     />
                   )}
                 </View>
-                {/* iOS inline pickers (if needed, but usually we just present modal) */}
                 {Platform.OS === 'ios' && showStartDate && (
                   <View style={styles.iosPickerContainer}>
                     <View style={styles.iosPickerHeader}>

@@ -66,14 +66,13 @@ export default function ConcertDetailScreen() {
     return () => { cancelled = true; };
   }, [id]);
 
-  // Ensure event row exists so FK constraints on groups / concert_status are satisfied.
-  // Events are synced from Ticketmaster, so the row should always exist already.
+
   async function ensureEventExists() {
     if (!event) return;
     const { data } = await supabase.from('events').select('id').eq('id', event.id).maybeSingle();
-    if (data) return; // already exists, nothing to do
+    if (data) return; 
 
-    // Fallback insert in case the row was somehow deleted
+    // Fallback insert for when the row was somehow deleted
     const dateTimeStr = event.date && event.time
       ? `${event.date}T${event.time}`
       : event.date;
@@ -151,11 +150,9 @@ export default function ConcertDetailScreen() {
     if (!user || !id) return;
 
     if (status === null) {
-      // Remove status
       await supabase.from('concert_status').delete().eq('user_id', user.id).eq('event_id', id);
       setConcertStatus(null);
     } else {
-      // Ensure event row exists so FK is satisfied
       await ensureEventExists();
       await supabase.from('concert_status').upsert(
         { user_id: user.id, event_id: id, status },
@@ -265,13 +262,11 @@ export default function ConcertDetailScreen() {
           <View style={styles.imageOverlay} />
           <Text style={styles.artistName}>{event?.name}</Text>
 
-          {/* Back button */}
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={Colors.text} />
           </TouchableOpacity>
         </View>
 
-        {/* Event info */}
         <View style={styles.infoSection}>
           {lineupArtists.length > 0 ? (
             <View style={styles.infoRow}>
@@ -327,7 +322,7 @@ export default function ConcertDetailScreen() {
           </TouchableOpacity>
         ) : null}
 
-        {/* Concert status buttons — logged-in only */}
+        {/* Concert status buttons */}
         {user && (
         <View style={styles.statusRow}>
           <TouchableOpacity
@@ -444,7 +439,6 @@ export default function ConcertDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Create Group Modal */}
       <CreateGroupModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}

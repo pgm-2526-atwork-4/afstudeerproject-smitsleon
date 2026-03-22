@@ -8,9 +8,7 @@ interface Props {
   subtitle?: string;
 }
 
-/**
- * Centered empty state display with icon, title and optional subtitle.
- */
+
 export function EmptyState({ icon, title, subtitle }: Props) {
   return (
     <View style={styles.container}>

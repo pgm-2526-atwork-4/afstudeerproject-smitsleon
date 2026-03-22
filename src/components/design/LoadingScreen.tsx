@@ -1,9 +1,6 @@
 import { Colors } from '@/style/theme';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-/**
- * Full-screen centered loading spinner.
- */
 export function LoadingScreen() {
   return (
     <View style={styles.container}>

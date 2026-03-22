@@ -1,9 +1,9 @@
 import type { Event } from '../types';
 import { supabase } from './supabase';
 
-/**
- * Haversine formula — returns the distance in km between two lat/lng points.
- */
+
+// Haversine formula — returns the distance in km between two lat/lng points.
+
 export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -14,9 +14,6 @@ export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/**
- * Fetches the IDs of all accepted buddies for a given user.
- */
 export async function getBuddyIds(userId: string): Promise<string[]> {
   const { data } = await supabase
     .from('buddies')
@@ -28,7 +25,6 @@ export async function getBuddyIds(userId: string): Promise<string[]> {
   );
 }
 
-/** Convert a Supabase events row to the app's Event type */
 export function dbRowToEvent(e: { id: string; name: string; date: string | null; time: string | null; location_name: string | null; venue_id: string | null; city: string | null; image_url: string | null; url: string | null }): Event {
   return {
     id: e.id,

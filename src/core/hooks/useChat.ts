@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import { useChatImages } from './useChatImages';
 import { useLiveLocation } from './useLiveLocation';
 
-// ── Types ──────────────────────────────────────────────
 
 export interface ChatMessage {
   id: string;
@@ -36,7 +35,7 @@ interface PrivateChatConfig {
 
 export type ChatConfig = GroupChatConfig | PrivateChatConfig;
 
-// ── Formatting helpers ─────────────────────────────────
+// Formatting helpers
 
 export function formatTime(dateStr: string) {
   return new Date(dateStr).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
@@ -52,7 +51,6 @@ export function formatDateSeparator(dateStr: string) {
   return d.toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-/** Compact time label for chat list items: time today, "Gisteren", or short date. */
 export function formatMessageTime(dateStr: string) {
   const d = new Date(dateStr);
   const now = new Date();
@@ -63,7 +61,7 @@ export function formatMessageTime(dateStr: string) {
   return d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
 }
 
-// ── Hook ───────────────────────────────────────────────
+//  Hook 
 
 export function useChat(userId: string | undefined, config: ChatConfig) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -87,7 +85,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
     ? config.groupId
     : [userId, config.otherUserId].sort().join('-');
 
-  // ── Push helper (avoids duplicating logic between handleSend & sendLocationMsg) ──
+  // ── Push helper
   async function sendChatPush(content: string) {
     if (!userId) return;
     const body = pushBody(content);
@@ -122,7 +120,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
     }
   }
 
-  // ── Send location / image message ──────────────────
+  // Send location / image message
   const sendLocationMsg = useCallback(
     async (content: string) => {
       if (!userId) return;
@@ -149,7 +147,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
     sendMessage: sendLocationMsg,
   });
 
-  // ── Parsers ────────────────────────────────────────
+  //  Parsers
 
   type GroupMessageRow = {
     id: string;
@@ -194,7 +192,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
     };
   }
 
-  // ── Fetch messages ─────────────────────────────────
+  //  Fetch messages 
 
   const fetchMessages = useCallback(async () => {
     if (!userId) return;
@@ -224,7 +222,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
     }
   }, [userId, config, isGroup]);
 
-  // ── Realtime subscription ──────────────────────────
+  //  Realtime subscription 
 
   useEffect(() => {
     fetchMessages();
@@ -286,7 +284,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
     return () => { supabase.removeChannel(channelBuilder); };
   }, [userId, channelId, fetchMessages, isGroup]);
 
-  // ── Auto-scroll ────────────────────────────────────
+  //  Auto-scroll
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -294,7 +292,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
     }
   }, [messages.length]);
 
-  // ── Send message ───────────────────────────────────
+  //  Send message 
 
   async function handleSend() {
     if (!text.trim() || !userId || sending) return;
@@ -340,7 +338,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
     setSending(false);
   }
 
-  // ── Delete message ─────────────────────────────────
+  // Delete message 
 
   function handleDeleteMessage(msgId: string) {
     const table = isGroup ? 'messages' : 'private_messages';
@@ -366,7 +364,7 @@ export function useChat(userId: string | undefined, config: ChatConfig) {
     ]);
   }
 
-  // ── Display helpers ────────────────────────────────
+  // Display helpers
 
   function shouldShowDateSeparator(index: number): boolean {
     if (index === 0) return true;

@@ -31,7 +31,7 @@ export function useLiveLocation({ userId, groupId, otherUserId, sendMessage }: O
 
     const isGroup = !!groupId;
 
-    // --- Fetch active live locations ---
+    // Fetch active live locations
     const query = supabase
       .from('live_locations')
       .select('id, user_id, latitude, longitude, expires_at, updated_at')
@@ -57,7 +57,7 @@ export function useLiveLocation({ userId, groupId, otherUserId, sendMessage }: O
       }
     });
 
-    // --- Realtime subscription ---
+    // Realtime subscription
     const channelName = isGroup ? `live-loc-g-${groupId}` : `live-loc-p-${[userId, otherUserId].sort().join('-')}`;
     const channelBuilder = supabase.channel(channelName);
 
@@ -68,7 +68,6 @@ export function useLiveLocation({ userId, groupId, otherUserId, sendMessage }: O
         handlePayload,
       );
     } else {
-      // Private chat — subscribe broadly and filter client-side
       channelBuilder.on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'live_locations' },
@@ -87,11 +86,11 @@ export function useLiveLocation({ userId, groupId, otherUserId, sendMessage }: O
       if (payload.eventType === 'DELETE') {
         setLiveLocations((prev) => {
           const next = { ...prev };
-          delete next[payload.old.id];
+          delete next[payload.old.id as string];
           return next;
         });
       } else {
-        const loc = payload.new as LiveLocationData;
+        const loc = payload.new as unknown as LiveLocationData;
         setLiveLocations((prev) => ({ ...prev, [loc.id]: loc }));
       }
     }

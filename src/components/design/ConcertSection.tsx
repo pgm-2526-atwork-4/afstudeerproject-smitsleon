@@ -7,20 +7,12 @@ import { ConcertCard } from './ConcertCard';
 interface Props {
   title: string;
   events: Event[];
-  /** Map of event ID → group count */
   groupCounts?: Record<string, number>;
   onEventPress: (event: Event) => void;
-  /** Max events to show before "Zie meer". Default: 6 */
   maxVisible?: number;
-  /** Called when "Zie meer" is tapped. Only shown if events.length > maxVisible. */
   onSeeMore?: () => void;
 }
 
-/**
- * Horizontal scrolling section of concert cards with a section title.
- * Shows a "Zie meer" link when events exceed maxVisible.
- * Hidden when events array is empty.
- */
 export function ConcertSection({
   title,
   events,

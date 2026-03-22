@@ -15,11 +15,9 @@ export function useConcerts() {
     setError(null);
 
     try {
-      // If groupsOnly is checked, we do an inner join on groups to only return events that have groups.
       let query = supabase
         .from('events')
-        .select(filters?.groupsOnly ? '*, groups!inner(id, max_members)' : '*')
-        .returns<DbEvent[]>();
+        .select(filters?.groupsOnly ? '*, groups!inner(id, max_members)' : '*');
       
       // Date filtering
       if (filters?.startDate) {
@@ -29,7 +27,6 @@ export function useConcerts() {
       }
 
       if (filters?.endDate) {
-        // Adjust end date to the end of the day
         const endDay = new Date(filters.endDate);
         endDay.setHours(23, 59, 59, 999);
         query = query.lte('date', endDay.toISOString());
@@ -39,9 +36,9 @@ export function useConcerts() {
       
       const hasActiveFilters = filters?.groupsOnly || filters?.startDate || filters?.endDate || keyword;
       if (hasActiveFilters) {
-        query = query.limit(500); // Ruimere limiet bij gericht zoeken/filteren
+        query = query.limit(50);
       } else {
-        query = query.limit(50); // Beperkte limiet op de standaard overzichtspagina
+        query = query.limit(50);
       }
 
       // Keyword search
@@ -51,7 +48,6 @@ export function useConcerts() {
         );
       }
 
-      // Group size filtering Note: this must refer to the joined table 'groups'
       if (filters?.groupsOnly) {
         if (filters.minGroupSize) {
           query = query.gte('groups.max_members', parseInt(filters.minGroupSize, 10));
@@ -61,10 +57,9 @@ export function useConcerts() {
         }
       }
 
-      const { data, error: err } = await query;
+      const { data, error: err } = await query.returns<DbEvent[]>();
       if (err) throw err;
 
-      // Ensure unique events since inner join with groups might return duplicates
       const uniqueEventsMap = new Map<string, Event>();
       for (const row of (data ?? [])) {
         if (!uniqueEventsMap.has(row.id)) {

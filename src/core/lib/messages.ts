@@ -1,5 +1,3 @@
-/** Gedeelde alert-titels en -berichten (Nederlands). */
-
 export const MSG = {
   NOT_LOGGED_IN: 'Niet ingelogd',
   NOT_LOGGED_IN_JOIN: 'Log in om deel te nemen aan een groep.',
@@ -14,7 +12,6 @@ export const MSG = {
   GROUP_NAME_REQUIRED: 'Geef je groep een naam.',
 } as const;
 
-/** Genereert een foutbericht in de vorm "${actie} mislukt. Probeer opnieuw." */
 export function errorRetry(action: string): string {
   return `${action} mislukt. Probeer opnieuw.`;
 }

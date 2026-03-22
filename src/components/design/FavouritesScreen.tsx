@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// ── Config types ───────────────────────────────────────
+// Config types 
 
 interface FavouriteItem {
   id: string;
@@ -31,29 +31,19 @@ interface FavouriteItem {
 }
 
 interface FavouritesScreenConfig {
-  /** Screen title shown in header */
   title: string;
-  /** Supabase table name for favourites (e.g. 'favourite_artists') */
   favouriteTable: 'favourite_artists' | 'favourite_venues';
-  /** Supabase table for the entity (e.g. 'artists') */
   entityTable: 'artists' | 'venues';
-  /** FK column on the favourite table (e.g. 'artist_id') */
   fkColumn: string;
-  /** Columns to select on the entity */
   entitySelect: string;
-  /** Map entity row to a FavouriteItem */
   mapEntity: (row: Record<string, any>) => FavouriteItem;
-  /** Route to navigate to on entity tap */
   onPress: (item: FavouriteItem, router: ReturnType<typeof useRouter>) => void;
-  /** Placeholder text for filter */
   filterPlaceholder: string;
-  /** Empty state subtitle when no favourites yet */
   emptySubtitle: string;
-  /** Target user ID (optional, defaults to current user) */
   userId?: string;
 }
 
-// ── Component ──────────────────────────────────────────
+// Component
 
 export function FavouritesScreen({ config }: { config: FavouritesScreenConfig }) {
   const { user } = useAuth();

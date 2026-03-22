@@ -1,8 +1,3 @@
-/**
- * Handmatige Supabase-tabeltypen afgeleid van het database schema.
- * Vervangt `as any` casts bij Supabase-queries.
- */
-
 import type { Group, UserProfile } from '.';
 
 export type DbUser = UserProfile;
@@ -139,7 +134,7 @@ export interface DbReport {
   resolved_at: string | null;
 }
 
-// ── Joined query result helpers ────────────────────────
+// Joined query result helpers
 
 export interface DbMessageWithUser extends DbMessage {
   users: Pick<DbUser, 'first_name' | 'last_name' | 'avatar_url'> | null;
@@ -154,32 +149,23 @@ export interface DbBuddyRequestWithUser extends DbBuddyRequest {
   users: Pick<DbUser, 'first_name' | 'last_name' | 'avatar_url'> | null;
 }
 
-// ── Lightweight pick types for common query patterns ───
 
-/** concert_status row when selecting only event_id */
 export type ConcertStatusEventId = Pick<DbConcertStatus, 'event_id'>;
 
-/** concert_status row when selecting user_id + status */
 export type ConcertStatusUserStatus = Pick<DbConcertStatus, 'user_id' | 'status'>;
 
-/** favourite_artists joined with artists(name) */
 export interface FavArtistWithName {
   artists: Pick<DbArtist, 'name'> | null;
 }
 
-/** favourite_venues selecting only venue_id */
 export type FavVenueId = Pick<DbFavouriteVenue, 'venue_id'>;
 
-/** groups selecting only event_id */
 export type GroupEventId = Pick<DbGroup, 'event_id'>;
 
-/** group_members selecting only group_id */
 export type GroupMemberGroupId = Pick<DbGroupMember, 'group_id'>;
 
-/** group_members selecting only user_id */
 export type GroupMemberUserId = Pick<DbGroupMember, 'user_id'>;
 
-/** group_members joined with users profile info */
 export interface GroupMemberWithUser {
   user_id: string;
   joined_at: string;
@@ -187,30 +173,25 @@ export interface GroupMemberWithUser {
   users: Pick<DbUser, 'first_name' | 'last_name' | 'avatar_url'> | null;
 }
 
-/** event_artists joined with full artist info */
 export interface EventArtistWithArtist {
   artist_id: string;
   artists: Pick<DbArtist, 'id' | 'name' | 'image_url' | 'genre'>;
 }
 
-/** favourite_artists joined with artists(name) + user_id (for people search) */
 export interface FavArtistWithUserAndName extends FavArtistWithName {
   user_id: string;
 }
 
-/** favourite_artists joined with full artist info */
 export interface FavArtistWithFullArtist {
   artist_id: string;
   artists: Pick<DbArtist, 'id' | 'name' | 'image_url' | 'genre'> | null;
 }
 
-/** favourite_venues joined with full venue info */
 export interface FavVenueWithFullVenue {
   venue_id: string;
   venues: Pick<DbVenue, 'id' | 'name' | 'city' | 'image_url'> | null;
 }
 
-/** group_members joined with groups + events (chat list) */
 export interface GroupMemberWithGroupDetail {
   group_id: string;
   joined_at: string;
@@ -226,16 +207,13 @@ export interface GroupMemberWithGroupDetail {
   } | null;
 }
 
-/** buddies row selecting user_id_1, user_id_2 */
 export interface BuddyPair {
   user_id_1: string;
   user_id_2: string;
 }
 
-/** users row for buddy status display */
 export type UserBasicInfo = Pick<DbUser, 'id' | 'first_name' | 'last_name' | 'avatar_url'>;
 
-/** groups query result with aggregated member_count */
 export interface GroupWithMemberCount extends DbGroup {
   member_count: { count: number }[];
 }

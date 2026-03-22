@@ -8,17 +8,11 @@ interface Props {
   venue: string;
   imageUrl: string;
   groupCount?: number;
-  /** If true, card fills its parent width instead of fixed 160px */
   fill?: boolean;
   onPress: () => void;
 }
 
-/**
- * Compact concert card for home page sections.
- * Shows event image, name, date, venue, and optional group count badge.
- */
 export function ConcertCard({ name, date, venue, imageUrl, groupCount = 0, fill, onPress }: Props) {
-  // Format date to short Dutch format: "15 mrt"
   const shortDate = (() => {
     try {
       const d = new Date(date);

@@ -99,15 +99,12 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Avatar */}
         <View style={styles.avatarWrapper}>
           <UserAvatar uri={profile.avatar_url} initials={initials} size={120} />
         </View>
 
-        {/* Name */}
         <Text style={styles.name}>{profile.first_name} {profile.last_name}</Text>
 
-        {/* Meta row */}
         <View style={styles.metaRow}>
           {profile.birth_date ? (
             <MetaItem icon="calendar-outline" label={`${calculateAge(profile.birth_date)} jaar`} />
@@ -122,7 +119,6 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* Concert status row */}
         <View style={styles.metaRow}>
           <MetaItem
             icon="star-outline"
@@ -140,7 +136,6 @@ export default function ProfileScreen() {
           />
         </View>
 
-        {/* Bio */}
         {profile.bio ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Over mij</Text>
@@ -148,7 +143,6 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        {/* Vibes */}
         {profile.vibe_tags && profile.vibe_tags.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Vibes</Text>
@@ -156,7 +150,6 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        {/* Favoriete artiesten */}
         <View style={styles.section}>
           <SectionHeader icon="musical-notes" title="Favoriete artiesten" />
           {favouriteArtists.length === 0 ? (
@@ -176,7 +169,6 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Favoriete venues */}
         <View style={styles.section}>
           <SectionHeader icon="location" title="Favoriete venues" />
           {favouriteVenues.length === 0 ? (
@@ -196,12 +188,10 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Profiel bewerken */}
         <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit-profile')}>
           <Text style={styles.editButtonText}>Profiel bewerken</Text>
         </TouchableOpacity>
 
-        {/* Uitloggen */}
         <TouchableOpacity style={styles.logoutButton} onPress={signOut}>
           <Text style={styles.logoutText}>Uitloggen</Text>
         </TouchableOpacity>

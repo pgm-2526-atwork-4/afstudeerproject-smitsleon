@@ -7,9 +7,6 @@ interface Props {
   title: string;
 }
 
-/**
- * Section title with an accompanying icon, used in profile sections.
- */
 export function SectionHeader({ icon, title }: Props) {
   return (
     <View style={styles.container}>

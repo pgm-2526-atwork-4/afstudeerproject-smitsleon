@@ -52,7 +52,7 @@ export function ChatBubble({ content, isOwn, isDeleted, onLongPress, liveLocatio
     );
   }
 
-  // --- System message ---
+  // System message
   const sysMatch = content.match(SYSTEM_REGEX);
   if (sysMatch) {
     return (
@@ -62,7 +62,7 @@ export function ChatBubble({ content, isOwn, isDeleted, onLongPress, liveLocatio
     );
   }
 
-  // --- Live location message ---
+  // Live location message
   const liveMatch = content.match(LIVE_LOCATION_REGEX);
   if (liveMatch) {
     const isActive = liveLocation ? new Date(liveLocation.expires_at).getTime() > Date.now() : false;
@@ -98,7 +98,7 @@ export function ChatBubble({ content, isOwn, isDeleted, onLongPress, liveLocatio
     );
   }
 
-  // --- One-time location message ---
+  // One-time location message
   const locMatch = content.match(LOCATION_REGEX);
   if (locMatch) {
     const [, latStr, lngStr] = locMatch;
@@ -120,7 +120,7 @@ export function ChatBubble({ content, isOwn, isDeleted, onLongPress, liveLocatio
     );
   }
 
-  // --- Image message ---
+  // Image message
   const imgMatch = content.match(IMAGE_REGEX);
   if (imgMatch) {
     const url = imgMatch[1];
@@ -145,7 +145,7 @@ export function ChatBubble({ content, isOwn, isDeleted, onLongPress, liveLocatio
     );
   }
 
-  // --- Regular text message ---
+  // Regular text message
   return (
     <TouchableOpacity
       activeOpacity={0.8}

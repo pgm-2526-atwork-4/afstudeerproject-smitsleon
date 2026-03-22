@@ -30,7 +30,6 @@ export function ChatInput({
 
   return (
     <View style={styles.container}>
-      {/* Input field with icons embedded inside on the right */}
       <View style={styles.inputWrapper}>
         <TextInput
           style={[styles.input, showIcons && styles.inputWithIcons]}

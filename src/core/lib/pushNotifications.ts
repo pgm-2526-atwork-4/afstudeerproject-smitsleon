@@ -4,7 +4,6 @@ import { Platform } from 'react-native';
 import { Colors } from '../../style/theme';
 import { supabase } from './supabase';
 
-// Configure how notifications behave when the app is in the foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -15,10 +14,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
-/**
- * Request push notification permissions, get an Expo push token,
- * and save it to the user's profile in Supabase.
- */
+// Request push notification permissions, get an Expo push token, and save it to the user's profile in supabase.
+
 export async function registerForPushNotificationsAsync(userId: string): Promise<string | null> {
   try {
     // Check / request permissions
@@ -30,7 +27,6 @@ export async function registerForPushNotificationsAsync(userId: string): Promise
     }
     if (finalStatus !== 'granted') return null;
 
-    // Android needs a notification channel
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'Concert Buddy',
@@ -40,7 +36,6 @@ export async function registerForPushNotificationsAsync(userId: string): Promise
       });
     }
 
-    // Get the Expo Push Token using the EAS project ID
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
       Constants.easConfig?.projectId;
@@ -49,20 +44,15 @@ export async function registerForPushNotificationsAsync(userId: string): Promise
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
     const token = tokenData.data;
 
-    // Persist the token in the user's profile
     await supabase.from('users').update({ push_token: token }).eq('id', userId);
 
     return token;
   } catch {
-    // Push registration is best-effort (e.g. fails on emulators)
     return null;
   }
 }
 
-/**
- * Create in-app notifications in the database AND send push notifications
- * to each target user's device. Replaces direct `notifications` table inserts.
- */
+
 export async function notifyUsers(
   notifications: {
     user_id: string;
@@ -88,10 +78,7 @@ export async function notifyUsers(
   );
 }
 
-/**
- * Send push notifications without creating in-app notification rows.
- * Useful for chat messages and buddy requests which live in their own tables.
- */
+
 export async function sendPushOnly(
   targets: {
     user_id: string;
@@ -139,6 +126,5 @@ export async function sendPushOnly(
       body: JSON.stringify(messages),
     });
   } catch {
-    // Silent fail — push delivery should not break the in-app flow
   }
 }

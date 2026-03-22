@@ -31,12 +31,12 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
 
-  // Step 1 - required
+  // Step 1 required
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
-  // Step 2 - optional
+  // Step 2 optional
   const [birthDate, setBirthDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [city, setCity] = useState<string | null>(null);
@@ -47,10 +47,10 @@ export default function OnboardingScreen() {
   const [shareLocation, setShareLocation] = useState(false);
   const [bio, setBio] = useState('');
 
-  // Step 3 - vibe tags
+  // Step 3 vibe tags
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  // Step 4 - favourite artists
+  // Step 4 favourite artists
   const [artistQuery, setArtistQuery] = useState('');
   const [artistResults, setArtistResults] = useState<{ id: string; name: string; image_url: string | null; genre: string | null }[]>([]);
   const [selectedArtists, setSelectedArtists] = useState<Set<string>>(new Set());
@@ -71,7 +71,7 @@ export default function OnboardingScreen() {
     }
   }
 
-  // Upload avatar to Supabase Storage
+  // Upload avatar to supabase storage
   async function uploadAvatar(): Promise<string | null> {
     if (!avatarUri || !user) return null;
 
@@ -132,7 +132,7 @@ export default function OnboardingScreen() {
     }
   }
 
-  // Toggle vibe tag (max 3)
+  // Toggle vibe tag
   function toggleTag(tag: string) {
     setSelectedTags((prev) => {
       if (prev.includes(tag)) return prev.filter((t) => t !== tag);
@@ -180,7 +180,7 @@ export default function OnboardingScreen() {
     return true;
   }
 
-  // Save profile to Supabase
+  // Save profile to supabase
   async function handleFinish() {
     if (!user) return;
     setSaving(true);

@@ -25,7 +25,7 @@ const SECTION_TITLES: Record<SectionType, string> = {
   nearby: 'In de buurt',
 };
 
-/* ── Per-section fetch helpers ──────────────────────────────── */
+/*  Per-section fetch helpers */
 
 async function fetchUpcoming(now: string): Promise<Event[]> {
   const { data } = await supabase
@@ -136,7 +136,7 @@ async function fetchNearby(lat: number, lng: number, now: string): Promise<Event
     .map(dbRowToEvent);
 }
 
-/* ── Strategy map ───────────────────────────────────────────── */
+/* Strategy map */
 
 interface FetchContext {
   userId?: string;

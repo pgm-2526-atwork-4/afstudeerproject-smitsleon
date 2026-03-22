@@ -6,11 +6,6 @@ export interface LocationResult {
   longitude: number;
 }
 
-/**
- * Get the user's current city + coordinates via GPS and reverse geocoding.
- * @param requestPermission  true = prompt user for permission (onboarding / edit-profile),
- *                           false = only proceed if already granted (silent auto-update).
- */
 export async function resolveCurrentCity(
   requestPermission: boolean,
 ): Promise<LocationResult | null> {

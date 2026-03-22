@@ -20,13 +20,6 @@ interface HomeSections {
 
 const NEARBY_RADIUS_KM = 30;
 
-/**
- * Fetches all home page sections from Supabase:
- * 1. Binnenkort — upcoming concerts
- * 2. Je buddies gaan ook — events where buddies have groups
- * 3. Favoriete artiesten — events matching favourite artist names
- * 4. In de buurt — events near user's location
- */
 export function useHomeSections() {
   const { user, profile } = useAuth();
   const [data, setData] = useState<HomeSections>({
@@ -46,7 +39,6 @@ export function useHomeSections() {
     setData((prev) => ({ ...prev, loading: true }));
     const now = new Date().toISOString();
 
-    // Pre-fetch buddy IDs once (used by both buddyPromise and buddyInterestedPromise)
     const buddyIds = user ? await getBuddyIds(user.id) : [];
 
     // 1. Upcoming concerts
@@ -155,7 +147,7 @@ export function useHomeSections() {
       return (rows ?? []).map(dbRowToEvent);
     })();
 
-    // 6. Events with groups (no auth needed)
+    // 6. Events with groups
     const withGroupsPromise = (async (): Promise<Event[]> => {
       const { data: groupRows } = await supabase
         .from('groups')
@@ -176,7 +168,7 @@ export function useHomeSections() {
       return (eventRows ?? []).map(dbRowToEvent);
     })();
 
-    // 7. Nearby events (show when user has coordinates, regardless of share_location)
+    // 7. Nearby events
     const nearbyPromise = (async (): Promise<Event[]> => {
       if (!profile?.latitude || !profile.longitude) return [];
       const latDelta = NEARBY_RADIUS_KM / 111;
@@ -193,7 +185,7 @@ export function useHomeSections() {
         .order('date', { ascending: true })
         .limit(20);
 
-      // Fine-grained distance filter
+      // distance filter
       return (rows ?? [])
         .filter((e: DbEvent) =>
           e.latitude && e.longitude
@@ -213,7 +205,6 @@ export function useHomeSections() {
       nearbyPromise,
     ]);
 
-    // Collect all event IDs to fetch group counts
     const allEventIds = new Set<string>();
     for (const list of [upcoming, buddies, buddyInterested, favouriteArtists, favouriteVenues, withGroups, nearby]) {
       for (const e of list) allEventIds.add(e.id);
@@ -236,7 +227,6 @@ export function useHomeSections() {
     const sortWithGroups = (events: Event[]) =>
       [...events].sort((a, b) => (groupCounts[b.id] ?? 0) - (groupCounts[a.id] ?? 0));
 
-    // Build allConcerts: withGroups first (sorted by group count), then remaining upcoming
     const withGroupIds = new Set(withGroups.map((e) => e.id));
     const remainingUpcoming = upcoming.filter((e) => !withGroupIds.has(e.id));
     const allConcerts = [

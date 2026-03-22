@@ -63,7 +63,7 @@ export default function ChatScreen() {
 
     const items: ChatItem[] = [];
 
-    // 1. Fetch group chats
+    // Fetch group chats
     const { data: groupData } = await supabase
       .from('group_members')
       .select(`
@@ -149,7 +149,7 @@ export default function ChatScreen() {
     }
     items.push(...groupItems);
 
-    // 2. Fetch private chats (conversations with buddies where at least 1 message exists)
+    // 2. Fetch private chats
     const { data: pmData } = await supabase
       .from('private_messages')
       .select('id, sender_id, receiver_id, content, created_at')
@@ -158,7 +158,6 @@ export default function ChatScreen() {
       .order('created_at', { ascending: false });
 
     if (pmData && pmData.length > 0) {
-      // Group by conversation partner
       const convos = new Map<string, { content: string; time: string; sender_id: string }>();
       for (const msg of pmData ?? []) {
         const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
@@ -208,7 +207,6 @@ export default function ChatScreen() {
 
   useFocusEffect(useCallback(() => {
     fetchChats().then(async () => {
-      // Load AsyncStorage read timestamps after chats are fetched
       setChatItems((prev) => {
         const keys = prev.map((c) => `chat_read:${c.id}`);
         AsyncStorage.multiGet(keys).then((stored) => {
@@ -318,7 +316,7 @@ export default function ChatScreen() {
           })()}
         </View>
 
-        {/* Time + chevron */}
+        {/* Time */}
         <View style={styles.cardRight}>
           {item.last_message_time ? (
             <Text style={styles.timeText}>{formatMessageTime(item.last_message_time)}</Text>
