@@ -6,6 +6,7 @@ import { SectionHeader } from '@/components/design/SectionHeader';
 import { UserAvatar } from '@/components/design/UserAvatar';
 import { VenueChip, VenueChipsGrid } from '@/components/design/VenueChipsGrid';
 import { VibeTags } from '@/components/design/VibeTags';
+import { ReportModal } from '@/components/functional/ReportModal';
 import { useAuth } from '@/core/context/AuthContext';
 import { notifyUsers, sendPushOnly } from '@/core/lib/pushNotifications';
 import { supabase } from '@/core/lib/supabase';
@@ -16,26 +17,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type BuddyStatus = 'none' | 'pending_incoming' | 'pending_outgoing' | 'buddies';
-
-const REPORT_REASONS = [
-  { value: 'spam', label: 'Spam' },
-  { value: 'ongepast_gedrag', label: 'Ongepast gedrag' },
-  { value: 'nep_profiel', label: 'Nep profiel' },
-  { value: 'intimidatie', label: 'Intimidatie' },
-  { value: 'andere', label: 'Andere' },
-];
 
 export default function UserProfileScreen() {
   const router = useRouter();
@@ -54,9 +46,6 @@ export default function UserProfileScreen() {
   const [favouriteVenues, setFavouriteVenues] = useState<VenueChip[]>([]);
   const [showBuddyMenu, setShowBuddyMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [reportReason, setReportReason] = useState('');
-  const [reportDescription, setReportDescription] = useState('');
-  const [reportSending, setReportSending] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!id) return;
@@ -217,23 +206,6 @@ export default function UserProfileScreen() {
     if (error) Alert.alert('Fout', 'Kon verzoek niet intrekken.');
     else { setBuddyStatus('none'); setPendingRequestId(null); }
     setSending(false);
-  }
-
-  async function handleReport() {
-    if (!currentUser || !id || !reportReason) return;
-    setReportSending(true);
-    const { error } = await supabase.from('reports').insert({
-      reporter_id: currentUser.id,
-      reported_user_id: id,
-      reason: reportReason,
-      description: reportDescription.trim() || null,
-    });
-    setReportSending(false);
-    setShowReportModal(false);
-    setReportReason('');
-    setReportDescription('');
-    if (error) Alert.alert('Fout', 'Kon melding niet versturen.');
-    else Alert.alert('Bedankt', 'Je melding is verstuurd en wordt door ons bekeken.');
   }
 
   function handleRemoveBuddy() {
@@ -488,44 +460,12 @@ export default function UserProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Report modal */}
-      <Modal visible={showReportModal} transparent animationType="fade" onRequestClose={() => setShowReportModal(false)}>
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowReportModal(false)}>
-          <View style={styles.reportModal} onStartShouldSetResponder={() => true}>
-            <Text style={styles.reportTitle}>Gebruiker rapporteren</Text>
-            <Text style={styles.reportSubtitle}>Waarom wil je deze gebruiker melden?</Text>
-            {REPORT_REASONS.map((r) => (
-              <TouchableOpacity
-                key={r.value}
-                style={[styles.reasonOption, reportReason === r.value && styles.reasonSelected]}
-                onPress={() => setReportReason(r.value)}
-              >
-                <Text style={[styles.reasonText, reportReason === r.value && styles.reasonTextSelected]}>{r.label}</Text>
-              </TouchableOpacity>
-            ))}
-            <TextInput
-              style={styles.reportInput}
-              placeholder="Extra toelichting (optioneel)"
-              placeholderTextColor={Colors.textMuted}
-              value={reportDescription}
-              onChangeText={setReportDescription}
-              multiline
-              maxLength={500}
-            />
-            <TouchableOpacity
-              style={[styles.reportSubmitBtn, !reportReason && styles.reportSubmitDisabled]}
-              onPress={handleReport}
-              disabled={!reportReason || reportSending}
-            >
-              {reportSending ? (
-                <ActivityIndicator size="small" color={Colors.text} />
-              ) : (
-                <Text style={styles.reportSubmitText}>Versturen</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ReportModal
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        reporterId={currentUser.id}
+        reportedUserId={id as string}
+      />
     </View>
   );
 }
@@ -608,16 +548,5 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 50, marginBottom: Spacing.md },
   reportBtn: { padding: Spacing.xs },
 
-  // Report modal
-  reportModal: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.xl, width: '85%', borderWidth: 1, borderColor: Colors.border },
-  reportTitle: { color: Colors.text, fontSize: FontSizes.lg, fontWeight: 'bold', marginBottom: Spacing.xs },
-  reportSubtitle: { color: Colors.textSecondary, fontSize: FontSizes.sm, marginBottom: Spacing.md },
-  reasonOption: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.xs },
-  reasonSelected: { borderColor: Colors.primary, backgroundColor: 'rgba(29, 185, 84, 0.15)' },
-  reasonText: { color: Colors.textSecondary, fontSize: FontSizes.sm },
-  reasonTextSelected: { color: Colors.primary, fontWeight: '600' },
-  reportInput: { color: Colors.text, fontSize: FontSizes.sm, backgroundColor: Colors.background, borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.border, padding: Spacing.md, marginTop: Spacing.md, minHeight: 80, textAlignVertical: 'top' },
-  reportSubmitBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, paddingVertical: Spacing.md, alignItems: 'center', marginTop: Spacing.md },
-  reportSubmitDisabled: { opacity: 0.4 },
-  reportSubmitText: { color: Colors.text, fontSize: FontSizes.md, fontWeight: 'bold' },
+
 });
