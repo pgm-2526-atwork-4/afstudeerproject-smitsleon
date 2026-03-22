@@ -2,13 +2,12 @@ import { GroupEditModal } from '@/components/design/GroupEditModal';
 import { MeetingPointModal } from '@/components/design/MeetingPointModal';
 import { Member, MembersList } from '@/components/design/MembersList';
 import { useAuth } from '@/core/context/AuthContext';
-import { DbGroupWithEvent, GroupMemberUserId, GroupMemberWithUser } from '@/core/types/database.types';
 import { errorRetry, MSG } from '@/core/lib/messages';
 import { notifyUsers } from '@/core/lib/pushNotifications';
 import { supabase } from '@/core/lib/supabase';
+import { DbGroupWithEvent, GroupMemberUserId, GroupMemberWithUser } from '@/core/types/database.types';
 import { Colors, FontSizes, Radius, Spacing } from '@/style/theme';
 import { Ionicons } from '@expo/vector-icons';
-import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -16,7 +15,6 @@ import {
   Alert,
   Image,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -372,17 +370,6 @@ export default function GroupDetailScreen() {
     );
   }
 
-  async function handleShareInvite() {
-    const link = Linking.createURL(`/group/${params.id}`);
-    try {
-      await Share.share({
-        message: `Join mijn groep "${groupTitle}" op Concert Buddy! 🎶\n${link}`,
-      });
-    } catch {
-      // user cancelled
-    }
-  }
-
   const parsedEventDate = eventDate ? new Date(eventDate) : null;
   const hasTime = parsedEventDate ? parsedEventDate.getUTCHours() !== 0 || parsedEventDate.getUTCMinutes() !== 0 : false;
 
@@ -407,11 +394,6 @@ export default function GroupDetailScreen() {
 
           {/* Header action buttons */}
           <View style={styles.headerActions}>
-            {isMember && (
-              <TouchableOpacity style={styles.headerActionButton} onPress={handleShareInvite}>
-                <Ionicons name="share-outline" size={22} color={Colors.text} />
-              </TouchableOpacity>
-            )}
             {isAdmin && (
               <TouchableOpacity style={styles.headerActionButton} onPress={openEditModal}>
                 <Ionicons name="settings-outline" size={22} color={Colors.text} />
